@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(New-Item -ItemType Directory -Force -Path \"c:\\\\Users\\\\IT\\\\Documents\\\\FORM LEMBUR\\\\frontend\\\\src\\\\styles\\\\templateStyle\")",
+      "Bash(npx react-scripts *)",
+      "PowerShell(Get-Process -Id 21136)",
+      "PowerShell(taskkill /PID 21136 /F)",
+      "Bash(npx --no-install tsc --noEmit --jsx react --target ESNext --module ESNext --moduleResolution bundler --allowSyntheticDefaultImports --esModuleInterop src/pages/ApprovedList.jsx)",
+      "Bash(node -e ' *)"
+    ]
+  }
+}

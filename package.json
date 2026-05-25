@@ -1,0 +1,14 @@
+{
+  "name": "form-lembur",
+  "version": "1.0.0",
+  "description": "Sistem Form Lembur Karyawan",
+  "scripts": {
+    "start": "node scripts/start-lan.js",
+    "lan": "node scripts/start-lan.js",
+    "start:lan": "node scripts/start-lan.js",
+    "backend": "cd backend && npm start",
+    "frontend": "cd frontend && npm start",
+    "dev:backend": "cd backend && npm run dev",
+    "install:all": "cd backend && npm install && cd ../frontend && npm install"
+  }
+}

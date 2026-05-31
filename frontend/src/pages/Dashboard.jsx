@@ -85,11 +85,9 @@ const pageSx = {
   display: 'flex',
   flexDirection: 'column',
   gap: '14px',
-  paddingBottom: '28px',
   '& > *': { minWidth: 0 },
   '@media (max-width: 768px)': {
     gap: '12px',
-    paddingBottom: '24px',
   },
 };
 

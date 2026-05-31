@@ -3,14 +3,22 @@ import {
   Box, Container, Typography, Chip, CircularProgress, Alert,
   Grid, Divider, useTheme, useMediaQuery, Paper, Table,
   TableBody, TableCell, TableContainer, TableHead, TableRow,
-  TextField, MenuItem, IconButton
+  TextField, MenuItem, IconButton, Dialog, DialogTitle,
+  DialogContent, DialogActions, Button, Autocomplete, Tooltip,
+  List, ListItem, ListItemText, ListItemSecondaryAction,
 } from '@mui/material';
 import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
+import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
+import AddIcon from '@mui/icons-material/Add';
 import axios from 'axios';
 import CreateButton from '../components/button/CreateButton';
 import CardBigBox from '../components/cardbox/CardBigBox';
 import { ChevronDown, SearchMd } from '../components/template/TemplateIcons.jsx';
+import { useAuth } from '../context/AuthContext';
 
 const API = '/api/karyawan';
 const ROWS_OPTIONS = [10, 25, 50, 100];
@@ -98,7 +106,207 @@ const cellSx = {
   wordBreak: 'break-word',
 };
 
+function ManageDeptDialog({ user, allDepartments, open, onClose }) {
+  const [userDepts, setUserDepts] = useState([]);
+  const [loadingDepts, setLoadingDepts] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [selectedDept, setSelectedDept] = useState(null);
+
+  useEffect(() => {
+    if (!open || !user || !user.id) return;
+    setLoadingDepts(true);
+    setError('');
+    axios.get(`/api/karyawan/user/${user.id}/departments`)
+      .then(r => setUserDepts(r.data.data))
+      .catch(() => setError('Gagal memuat departemen user.'))
+      .finally(() => setLoadingDepts(false));
+  }, [open, user]);
+
+  const reload = () => {
+    axios.get(`/api/karyawan/user/${user.id}/departments`)
+      .then(r => setUserDepts(r.data.data))
+      .catch(() => {});
+  };
+
+  const handleAdd = async () => {
+    if (!selectedDept) return;
+    setSaving(true);
+    setError('');
+    try {
+      await axios.post(`/api/karyawan/user/${user.id}/departments`, {
+        departmentId: selectedDept.id,
+        isPrimary: userDepts.length === 0,
+      });
+      setSelectedDept(null);
+      reload();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Gagal menambahkan departemen.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRemove = async (deptId) => {
+    setSaving(true);
+    try {
+      await axios.delete(`/api/karyawan/user/${user.id}/departments/${deptId}`);
+      reload();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Gagal menghapus departemen.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSetPrimary = async (deptId) => {
+    setSaving(true);
+    try {
+      await axios.patch(`/api/karyawan/user/${user.id}/departments/${deptId}/primary`);
+      reload();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Gagal mengubah primary.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const assignedIds = new Set(userDepts.map(d => d.id));
+  const availableToAdd = allDepartments.filter(d => !assignedIds.has(d.id));
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>
+        Kelola Departemen
+        <Typography variant="body2" color="text.secondary" fontWeight={400}>
+          {user?.fullName} · {user?.employeeId || '-'}
+        </Typography>
+      </DialogTitle>
+
+      <DialogContent dividers>
+        {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
+
+        <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
+          Departemen Saat Ini
+        </Typography>
+
+        {loadingDepts ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+            <CircularProgress size={24} />
+          </Box>
+        ) : userDepts.length === 0 ? (
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontStyle: 'italic' }}>
+            Belum ada departemen.
+          </Typography>
+        ) : (
+          <List dense disablePadding sx={{ mb: 2 }}>
+            {userDepts.map(d => (
+              <ListItem
+                key={d.id}
+                sx={{
+                  border: '1px solid',
+                  borderColor: d.is_primary ? 'primary.main' : 'divider',
+                  borderRadius: 2,
+                  mb: 1,
+                  bgcolor: d.is_primary ? 'primary.50' : 'transparent',
+                }}
+              >
+                <ListItemText
+                  primary={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography variant="body2" fontWeight={700}>{d.name}</Typography>
+                      <Chip label={d.code || d.name} size="small" color="primary" sx={{ height: 18, fontSize: '0.65rem' }} />
+                      {d.is_primary ? (
+                        <Chip label="Primary" size="small" color="success" sx={{ height: 18, fontSize: '0.65rem' }} />
+                      ) : null}
+                    </Box>
+                  }
+                  secondary={d.class || '-'}
+                />
+                <ListItemSecondaryAction>
+                  <Box sx={{ display: 'flex', gap: 0.5 }}>
+                    {!d.is_primary && (
+                      <Tooltip title="Jadikan Primary">
+                        <IconButton size="small" onClick={() => handleSetPrimary(d.id)} disabled={saving}>
+                          <StarBorderIcon fontSize="small" sx={{ color: 'warning.main' }} />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    {d.is_primary && (
+                      <Tooltip title="Primary saat ini">
+                        <span>
+                          <IconButton size="small" disabled>
+                            <StarIcon fontSize="small" sx={{ color: 'warning.main' }} />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    )}
+                    <Tooltip title="Hapus dari departemen ini">
+                      <span>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => handleRemove(d.id)}
+                          disabled={saving || (userDepts.length === 1)}
+                        >
+                          <DeleteOutlineIcon fontSize="small" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  </Box>
+                </ListItemSecondaryAction>
+              </ListItem>
+            ))}
+          </List>
+        )}
+
+        <Divider sx={{ my: 2 }} />
+
+        <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>
+          Tambah Departemen
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+          <Autocomplete
+            options={availableToAdd}
+            getOptionLabel={d => `${d.name}${d.class && d.class !== d.name ? ` — ${d.class}` : ''}`}
+            value={selectedDept}
+            onChange={(_, v) => setSelectedDept(v)}
+            renderOption={(props, d) => (
+              <Box component="li" {...props}>
+                <Box>
+                  <Typography variant="body2" fontWeight={600}>{d.name}</Typography>
+                  <Typography variant="caption" color="text.secondary">{d.class} · {d.code}</Typography>
+                </Box>
+              </Box>
+            )}
+            renderInput={params => <TextField {...params} label="Pilih departemen..." size="small" />}
+            noOptionsText="Semua departemen sudah ditambahkan"
+            sx={{ flex: 1 }}
+            size="small"
+          />
+          <Button
+            variant="contained"
+            startIcon={saving ? <CircularProgress size={14} color="inherit" /> : <AddIcon />}
+            onClick={handleAdd}
+            disabled={!selectedDept || saving}
+            sx={{ flexShrink: 0, height: 40 }}
+          >
+            Tambah
+          </Button>
+        </Box>
+      </DialogContent>
+
+      <DialogActions sx={{ px: 3, py: 2 }}>
+        <Button onClick={onClose} variant="outlined">Tutup</Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
 export default function MasterKaryawan() {
+  const { user: currentUser } = useAuth();
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.department === 'IT';
+
   const [karyawan, setKaryawan] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -106,6 +314,8 @@ export default function MasterKaryawan() {
   const [search, setSearch] = useState('');
   const [filterDept, setFilterDept] = useState('');
   const [includeInactive, setIncludeInactive] = useState(false);
+
+  const [deptDialogUser, setDeptDialogUser] = useState(null);
 
   // Pagination states matching ApprovedList
   const [page, setPage] = useState(1);
@@ -201,7 +411,7 @@ export default function MasterKaryawan() {
         >
           <option value="">Semua Department</option>
           {departments.map(d => (
-            <option key={d.department} value={d.department}>
+            <option key={d.id ?? d.departmentId ?? d.department} value={d.department}>
               {d.department} ({byDept[d.department] || 0})
             </option>
           ))}
@@ -270,13 +480,22 @@ export default function MasterKaryawan() {
                             <Chip label={`L${k.level}`} size="small" color={LEVEL_COLOR[k.level] || 'default'} sx={{ height: 20, fontSize: '0.7rem' }} />
                           </Box>
                         </Box>
-                        <Chip
-                          label={k.status}
-                          size="small"
-                          color={k.status === 'Active' ? 'success' : 'default'}
-                          variant={k.status === 'Active' ? 'filled' : 'outlined'}
-                          sx={{ fontSize: '0.75rem', height: 22 }}
-                        />
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
+                          <Chip
+                            label={k.status}
+                            size="small"
+                            color={k.status === 'Active' ? 'success' : 'default'}
+                            variant={k.status === 'Active' ? 'filled' : 'outlined'}
+                            sx={{ fontSize: '0.75rem', height: 22 }}
+                          />
+                          {isAdmin && (
+                            <Tooltip title="Kelola Departemen">
+                              <IconButton size="small" color="primary" onClick={() => setDeptDialogUser(k)}>
+                                <ManageAccountsIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                        </Box>
                       </Box>
 
                       <Divider sx={{ my: 1, borderColor: 'divider' }} />
@@ -380,12 +599,13 @@ export default function MasterKaryawan() {
                   >
                     <TableHead>
                       <TableRow>
-                        <TableCell sx={{ width: '6%', fontWeight: 700 }}>No</TableCell>
-                        <TableCell sx={{ width: '24%', fontWeight: 700 }}>Karyawan</TableCell>
-                        <TableCell sx={{ width: '20%', fontWeight: 700 }}>Department & Divisi</TableCell>
-                        <TableCell sx={{ width: '22%', fontWeight: 700 }}>Jabatan & Level</TableCell>
+                        <TableCell sx={{ width: '5%', fontWeight: 700 }}>No</TableCell>
+                        <TableCell sx={{ width: '22%', fontWeight: 700 }}>Karyawan</TableCell>
+                        <TableCell sx={{ width: '19%', fontWeight: 700 }}>Department & Divisi</TableCell>
+                        <TableCell sx={{ width: '20%', fontWeight: 700 }}>Jabatan & Level</TableCell>
                         <TableCell sx={{ width: '18%', fontWeight: 700 }}>Atasan & Kontak</TableCell>
-                        <TableCell sx={{ width: '10%', fontWeight: 700 }} align="center">Status</TableCell>
+                        <TableCell sx={{ width: '9%', fontWeight: 700 }} align="center">Status</TableCell>
+                        {isAdmin && <TableCell sx={{ width: '7%', fontWeight: 700 }} align="center">Aksi</TableCell>}
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -470,6 +690,17 @@ export default function MasterKaryawan() {
                               sx={{ fontSize: '0.75rem', height: 22, fontWeight: 600 }}
                             />
                           </TableCell>
+
+                          {/* 7. Aksi (admin only) */}
+                          {isAdmin && (
+                            <TableCell align="center">
+                              <Tooltip title="Kelola Departemen">
+                                <IconButton size="small" color="primary" onClick={() => setDeptDialogUser(row)}>
+                                  <ManageAccountsIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            </TableCell>
+                          )}
                         </TableRow>
                       ))}
                     </TableBody>
@@ -521,6 +752,13 @@ export default function MasterKaryawan() {
           </CardBigBox>
         </Box>
       </Container>
+
+      <ManageDeptDialog
+        user={deptDialogUser}
+        allDepartments={departments}
+        open={Boolean(deptDialogUser)}
+        onClose={() => setDeptDialogUser(null)}
+      />
     </Box>
   );
 }

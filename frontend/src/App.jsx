@@ -1,23 +1,31 @@
-import React, { useState } from 'react';
+import React, { lazy, Suspense, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { createTheme, ThemeProvider, CssBaseline } from '@mui/material';
+import { createTheme, ThemeProvider, CssBaseline, CircularProgress, Box } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 
 import Header from './components/template/Header';
 import Sidebar from './components/template/Sidebar';
-import { primaryNavigationItems, adminNavigationItems, secondaryNavigationItems } from './services/Navigation';
+import { primaryNavigationItems, adminNavigationItems, hrNavigationItems, secondaryNavigationItems } from './services/Navigation';
 import BackgroundMain from './components/template/BackgroundMain';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 import LoginPage from './pages/LoginPage';
-import Dashboard from './pages/Dashboard';
-import FormLembur from './pages/FormLembur';
-import Approval from './pages/Approval';
-import DetailLembur from './pages/DetailLembur';
-import MasterKaryawan from './pages/MasterKaryawan';
-import Departemen from './pages/Departemen';
-import ApprovedList from './pages/ApprovedList';
+
+const Dashboard      = lazy(() => import('./pages/Dashboard'));
+const FormLembur     = lazy(() => import('./pages/FormLembur'));
+const Approval       = lazy(() => import('./pages/Approval'));
+const ApprovedList   = lazy(() => import('./pages/ApprovedList'));
+const DetailLembur   = lazy(() => import('./pages/DetailLembur'));
+const MasterKaryawan = lazy(() => import('./pages/MasterKaryawan'));
+const Departemen     = lazy(() => import('./pages/Departemen'));
+const Laporan        = lazy(() => import('./pages/Laporan'));
+
+const PageLoader = () => (
+  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+    <CircularProgress size={32} />
+  </Box>
+);
 
 /* ─── MUI Theme — Pilar Group ─────────────────────────────────── */
 const muiTheme = createTheme({
@@ -111,6 +119,7 @@ const ROUTE_TITLES = {
   '/form/baru':      'Buat Form Lembur',
   '/approval':       'Approval Form Lembur',
   '/approved':       'Approved Form Lembur',
+  '/laporan':        'Laporan Lembur',
 }
 
 function getHeaderTitle(pathname) {
@@ -147,6 +156,7 @@ function AppLayout({ children }) {
           ...primaryNavigationItems.filter((item) =>
             item.id !== 'dashboard' || canSeeDashboard(user)
           ),
+          ...(canSeeDashboard(user) ? hrNavigationItems : []),
           ...(user?.role === 'admin' ? adminNavigationItems : []),
         ]}
         secondaryItems={secondaryNavigationItems}
@@ -220,20 +230,23 @@ export default function App() {
       <LocalizationProvider dateAdapter={AdapterDayjs}>
         <AuthProvider>
           <BrowserRouter>
-            <Routes>
-              <Route path="/login"            element={<LoginPage />} />
-              <Route path="/"                 element={<DashboardRoute><Dashboard /></DashboardRoute>} />
-              <Route path="/dashboard"        element={<DashboardRoute><Dashboard /></DashboardRoute>} />
-              <Route path="/approval"         element={<ProtectedRoute><Approval /></ProtectedRoute>} />
-              <Route path="/approved"         element={<ProtectedRoute><ApprovedList /></ProtectedRoute>} />
-              <Route path="/form/baru"        element={<ProtectedRoute><FormLembur /></ProtectedRoute>} />
-              <Route path="/form/edit/:id"    element={<ProtectedRoute><FormLembur /></ProtectedRoute>} />
-              <Route path="/form/:id"         element={<ProtectedRoute><DetailLembur /></ProtectedRoute>} />
-              <Route path="/karyawan"         element={<ProtectedRoute><MasterKaryawan /></ProtectedRoute>} />
-              <Route path="/admin/employees"  element={<ProtectedRoute><MasterKaryawan /></ProtectedRoute>} />
-              <Route path="/admin/departments" element={<ProtectedRoute><Departemen /></ProtectedRoute>} />
-              <Route path="*"                 element={<Navigate to="/" replace />} />
-            </Routes>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/login"            element={<LoginPage />} />
+                <Route path="/"                 element={<DashboardRoute><Dashboard /></DashboardRoute>} />
+                <Route path="/dashboard"        element={<DashboardRoute><Dashboard /></DashboardRoute>} />
+                <Route path="/approval"         element={<ProtectedRoute><Approval /></ProtectedRoute>} />
+                <Route path="/approved"         element={<ProtectedRoute><ApprovedList /></ProtectedRoute>} />
+                <Route path="/form/baru"        element={<ProtectedRoute><FormLembur /></ProtectedRoute>} />
+                <Route path="/form/edit/:id"    element={<ProtectedRoute><FormLembur /></ProtectedRoute>} />
+                <Route path="/form/:id"         element={<ProtectedRoute><DetailLembur /></ProtectedRoute>} />
+                <Route path="/karyawan"         element={<ProtectedRoute><MasterKaryawan /></ProtectedRoute>} />
+                <Route path="/admin/employees"  element={<ProtectedRoute><MasterKaryawan /></ProtectedRoute>} />
+                <Route path="/admin/departments" element={<ProtectedRoute><Departemen /></ProtectedRoute>} />
+                <Route path="/laporan"          element={<ProtectedRoute><Laporan /></ProtectedRoute>} />
+                <Route path="*"                 element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
           </BrowserRouter>
         </AuthProvider>
       </LocalizationProvider>

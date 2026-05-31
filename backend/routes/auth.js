@@ -1,7 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const pool = require('../config/db');
+
+const BOD_KEYS = ['director', 'commissioner', 'komisaris', 'president director'];
+const MANAGER_KEYS = ['manager', 'supervisor', 'spv', 'kepala', 'head', 'koordinator', 'lead'];
 
 router.post('/login', async (req, res) => {
   const { username, password } = req.body;
@@ -34,27 +38,64 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ success: false, message: 'Password salah.' });
     }
 
-    res.json({
-      success: true,
-      data: {
-        employeeId: u.internal_id ? String(u.internal_id) : u.id,
-        fullName: u.name,
-        username: u.username,
-        email: u.email || '',
-        departmentId: u.department_id || '',
-        department: u.dept_name || '',
-        departmentClass: u.dept_class || '',
-        class: u.dept_class || '',
-        jobPosition: u.job_position || '',
-        jobLevel: u.job_level_name || '',
-        level: u.job_level_num || 1,
-        status: 'Active',
-        kodeDivisi: u.dept_code || '',
-        role: (
-          u.dept_name === 'IT' || u.dept_name === 'Board Of Director'
-        ) ? 'admin' : 'user',
-      },
-    });
+    const [deptRows] = await pool.query(
+      `SELECT md.id AS department_id, md.name AS dept_name, md.class AS dept_class, md.code AS dept_code, cud.is_primary
+       FROM central_user_departments cud
+       JOIN master_departments md ON cud.department_id = md.id
+       WHERE cud.user_id = ? AND md.is_active = 1
+       ORDER BY cud.is_primary DESC, md.name ASC`,
+      [u.id]
+    );
+
+    const allDepartments = deptRows.map(d => ({
+      departmentId: d.department_id,
+      department: d.dept_name,
+      departmentClass: d.dept_class || '',
+      class: d.dept_class || '',
+      kodeDivisi: d.dept_code || '',
+      isPrimary: Boolean(d.is_primary),
+    }));
+
+    const jobLevel = (u.job_level_name || '').toLowerCase();
+    const jobPosition = (u.job_position || '').toLowerCase();
+    const isBOD = BOD_KEYS.some(k => jobLevel.includes(k)) || u.dept_name === 'Board Of Director';
+    const isAdmin = u.dept_name === 'IT' || isBOD;
+    const isKoordinator = jobLevel.includes('koordinator') || jobPosition.includes('koordinator');
+    const isManager = MANAGER_KEYS.some(k => jobLevel.includes(k) || jobPosition.includes(k));
+    const allowedFormTypes = (isAdmin || isKoordinator)
+      ? ['manager', 'staff', 'outsourcing', 'harian_lepas']
+      : isManager
+        ? ['manager', 'staff']
+        : ['staff'];
+
+    const userData = {
+      id: u.id,
+      employeeId: u.internal_id ? String(u.internal_id) : u.id,
+      fullName: u.name,
+      username: u.username,
+      email: u.email || '',
+      departmentId: u.department_id || '',
+      department: u.dept_name || '',
+      departmentClass: u.dept_class || '',
+      class: u.dept_class || '',
+      jobPosition: u.job_position || '',
+      jobLevel: u.job_level_name || '',
+      level: u.job_level_num || 1,
+      status: 'Active',
+      kodeDivisi: u.dept_code || '',
+      role: isAdmin ? 'admin' : 'user',
+      isAdmin,
+      allowedFormTypes,
+      departments: allDepartments,
+    };
+
+    const token = jwt.sign(
+      { id: u.id, username: u.username, role: userData.role },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
+    );
+
+    res.json({ success: true, token, data: userData });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

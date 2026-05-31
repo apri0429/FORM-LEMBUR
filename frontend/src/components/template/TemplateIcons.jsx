@@ -242,3 +242,56 @@ export function Check(props) {
     </IconBase>
   )
 }
+
+export function FilterLines(props) {
+  return (
+    <IconBase {...props}>
+      <line x1="3" y1="6" x2="21" y2="6" />
+      <line x1="6" y1="12" x2="18" y2="12" />
+      <line x1="9" y1="18" x2="15" y2="18" />
+    </IconBase>
+  )
+}
+
+export function Building(props) {
+  return (
+    <IconBase {...props}>
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M9 22V12h6v10" />
+      <path d="M8 7h.01M12 7h.01M16 7h.01M8 11h.01M16 11h.01" strokeLinecap="round" />
+    </IconBase>
+  )
+}
+
+export function FilePlus(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="12" y1="18" x2="12" y2="12" />
+      <line x1="9" y1="15" x2="15" y2="15" />
+    </IconBase>
+  )
+}
+
+export function ClipboardList(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+      <rect x="8" y="2" width="8" height="4" rx="1" />
+      <line x1="9" y1="12" x2="15" y2="12" />
+      <line x1="9" y1="16" x2="15" y2="16" />
+      <line x1="9" y1="8" x2="11" y2="8" />
+    </IconBase>
+  )
+}
+
+export function ClipboardCheck(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+      <rect x="8" y="2" width="8" height="4" rx="1" />
+      <path d="m9 14 2 2 4-4" />
+    </IconBase>
+  )
+}

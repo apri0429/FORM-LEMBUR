@@ -13,17 +13,25 @@ import {
   TableRow,
   Typography,
 } from '@mui/material';
+import CancelIcon from '@mui/icons-material/Cancel';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import FactCheckRoundedIcon from '@mui/icons-material/FactCheckRounded';
+import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
+import ThumbUpIcon from '@mui/icons-material/ThumbUp';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import CreateButton from '../components/button/CreateButton';
 import CardBigBox from '../components/cardbox/CardBigBox';
 import { Check, ChevronLeft, Printer, XClose } from '../components/template/TemplateIcons';
-import StatusChip from '../components/StatusChip';
 import PrintPreviewModal from '../components/PrintPreviewModal';
-import { printLemburForm } from '../utils/printLembur';
 
 const API = '/api/lembur';
+const STATUS_CHIP_MAP = {
+  approved: { label: 'Disetujui', color: 'success', icon: <CheckCircleIcon fontSize="small" /> },
+  partially_approved: { label: 'Disetujui L1', color: 'warning', icon: <ThumbUpIcon fontSize="small" /> },
+  pending: { label: 'Menunggu', color: 'default', icon: <HourglassEmptyIcon fontSize="small" /> },
+  rejected: { label: 'Ditolak', color: 'error', icon: <CancelIcon fontSize="small" /> },
+};
 
 const detailPageSx = {
   '& .detail-info-summary': {
@@ -80,6 +88,13 @@ function formatKompensasi(value) {
   return text || '-';
 }
 
+function formatLemburPada(value) {
+  const text = String(value ?? '').trim();
+  if (text === 'Hari Libur') return 'Holiday';
+  if (text === 'Hari Kerja') return 'Workday';
+  return text || '-';
+}
+
 function getKompensasiSummary(form) {
   const values = form.entries
     ?.map((entry) => formatKompensasi(entry.kompensasi))
@@ -89,12 +104,17 @@ function getKompensasiSummary(form) {
 
   const uniqueValues = [...new Set(values)];
   if (uniqueValues.length <= 2) return uniqueValues.join(', ');
-  return `${uniqueValues.slice(0, 2).join(', ')} +${uniqueValues.length - 2} lainnya`;
+  return `${uniqueValues.slice(0, 2).join(', ')} +${uniqueValues.length - 2} others`;
+}
+
+function DetailStatusChip({ status }) {
+  const config = STATUS_CHIP_MAP[status] ?? { label: status || '-', color: 'default' };
+  return <Chip label={config.label} color={config.color} size="small" icon={config.icon} />;
 }
 
 function ApprovalBadge({ value }) {
-  if (value === 2 || value === 1) return <Chip label="Disetujui" color="success" size="small" />;
-  return <Chip label="Belum" color="default" size="small" variant="outlined" />;
+  if (value === 2 || value === 1) return <Chip label="Disetujui" color="success" size="small" icon={<CheckCircleIcon fontSize="small" />} />;
+  return <Chip label="Menunggu" color="default" size="small" variant="outlined" icon={<HourglassEmptyIcon fontSize="small" />} />;
 }
 
 export function DetailLemburContent({ formId, onClose, inPopup = false, onFormLoaded }) {
@@ -114,7 +134,7 @@ export function DetailLemburContent({ formId, onClose, inPopup = false, onFormLo
         setForm(data);
         onFormLoaded?.(data);
       })
-      .catch(() => setError('Gagal memuat data form.'))
+      .catch(() => setError('Failed to load form data.'))
       .finally(() => setLoading(false));
   };
 
@@ -127,11 +147,11 @@ export function DetailLemburContent({ formId, onClose, inPopup = false, onFormLo
         approvalLevel: dialog.level,
         catatanApproval: catatan,
       });
-      setSuccess(`Form berhasil ${dialog.status === 'approved' ? 'disetujui' : 'ditolak'}.`);
+      setSuccess(`Form successfully ${dialog.status === 'approved' ? 'approved' : 'rejected'}.`);
       setDialog({ open: false, status: '', level: 2 });
       fetchForm();
     } catch {
-      setError('Gagal mengubah status.');
+      setError('Failed to update status.');
     }
   };
 
@@ -144,24 +164,29 @@ export function DetailLemburContent({ formId, onClose, inPopup = false, onFormLo
   }
 
   if (!form) {
-    return <Alert severity="error">Form tidak ditemukan.</Alert>;
+    return <Alert severity="error">Form not found.</Alert>;
   }
 
   const kompensasiSummary = getKompensasiSummary(form);
   const entries = form.entries ?? [];
 
+  const processedBy = form.status === 'rejected'
+    ? (form.rejectedBy || '-')
+    : (form.approvedBy || '-');
+
   const infoItems = [
-    { label: 'Department', value: form.department },
-    { label: 'Class', value: form.class },
-    { label: 'Diperintah Oleh', value: form.diperintahOleh },
+    { label: 'Departemen', value: form.department },
+    { label: 'Kelas', value: form.class },
+    { label: 'Diminta Oleh', value: form.diperintahOleh },
     { label: 'Email', value: form.email },
-    { label: 'Tgl Form Dibuat', value: form.tanggalFormDibuat },
-    { label: 'Tgl Pengajuan', value: form.tanggalPengajuan },
-    { label: 'Lembur Pada', value: form.lemburPada },
+    { label: 'Tgl. Form Dibuat', value: form.tanggalFormDibuat },
+    { label: 'Tgl. Pengajuan', value: form.tanggalPengajuan },
+    { label: 'Hari Lembur', value: form.lemburPada || '-' },
     { label: 'Kode Divisi', value: form.kodeDivisi },
     { label: 'Kompensasi', value: kompensasiSummary },
-    { label: 'Jumlah Karyawan', value: `${entries.length} orang` },
+    { label: 'Jumlah Karyawan', value: `${entries.length} karyawan` },
     { label: 'No. Urut Form', value: String(form.noUrutForm || '-') },
+    { label: 'Diproses Oleh', value: processedBy },
   ];
 
   const approvalDialog = dialog.open && (
@@ -172,9 +197,9 @@ export function DetailLemburContent({ formId, onClose, inPopup = false, onFormLo
       <div className="dashboard-popup" style={{ width: 'min(100%, 480px)' }}>
         <div className="dashboard-popup__header">
           <div>
-            <p className="dashboard-popup__eyebrow">Konfirmasi</p>
+            <p className="dashboard-popup__eyebrow">Confirmation</p>
             <h3 className="dashboard-popup__title">
-              {dialog.status === 'approved' ? 'Setujui Form Lembur' : 'Tolak Form Lembur'}
+              {dialog.status === 'approved' ? 'Approve Overtime Form' : 'Reject Overtime Form'}
             </h3>
           </div>
           <button
@@ -190,32 +215,32 @@ export function DetailLemburContent({ formId, onClose, inPopup = false, onFormLo
           <div style={{ background: 'rgba(248,249,250,0.95)', borderRadius: 12, padding: '12px 14px', marginBottom: 16, display: 'grid', gap: 4 }}>
             <Typography variant="body2"><strong>Form:</strong> {form.nomerForm}</Typography>
             <Typography variant="body2"><strong>Department:</strong> {form.department}</Typography>
-            <Typography variant="body2"><strong>Diperintah Oleh:</strong> {form.diperintahOleh}</Typography>
-            <Typography variant="body2"><strong>Kompensasi:</strong> {kompensasiSummary}</Typography>
+            <Typography variant="body2"><strong>Requested By:</strong> {form.diperintahOleh}</Typography>
+            <Typography variant="body2"><strong>Compensation:</strong> {kompensasiSummary}</Typography>
           </div>
 
           {dialog.status === 'approved' && (
             <div className="register-user-popup__field" style={{ marginBottom: 14 }}>
-              <label className="register-user-popup__label">Level Approval</label>
+              <label className="register-user-popup__label">Approval Level</label>
               <select
                 className="register-user-popup__select"
                 value={dialog.level}
                 onChange={(e) => setDialog((prev) => ({ ...prev, level: Number(e.target.value) }))}
               >
-                <option value={1}>Level 1 (Approval Pertama)</option>
-                <option value={2}>Level 2 (Approval Final)</option>
+                <option value={1}>Level 1 (First Approval)</option>
+                <option value={2}>Level 2 (Final Approval)</option>
               </select>
             </div>
           )}
 
           <div className="register-user-popup__field">
-            <label className="register-user-popup__label">Catatan / Keterangan</label>
+            <label className="register-user-popup__label">Notes / Remarks</label>
             <textarea
               className="register-user-popup__input"
               rows={3}
               placeholder={dialog.status === 'approved'
-                ? 'Contoh: Disetujui sesuai kebutuhan operasional...'
-                : 'Contoh: Ditolak - tidak memenuhi prosedur...'}
+                ? 'Example: Approved according to operational needs...'
+                : 'Example: Rejected - does not meet the procedure...'}
               value={catatan}
               onChange={(e) => setCatatan(e.target.value)}
             />
@@ -228,14 +253,14 @@ export function DetailLemburContent({ formId, onClose, inPopup = false, onFormLo
             className="dashboard-popup__button dashboard-popup__button--secondary"
             onClick={() => setDialog({ ...dialog, open: false })}
           >
-            Batal
+            Cancel
           </button>
           <button
             type="button"
             className={`dashboard-popup__button ${dialog.status === 'approved' ? 'dashboard-popup__button--primary' : 'dashboard-popup__button--danger'}`}
             onClick={handleApproval}
           >
-            {dialog.status === 'approved' ? 'Ya, Setujui' : 'Ya, Tolak'}
+            {dialog.status === 'approved' ? 'Yes, Approve' : 'Yes, Reject'}
           </button>
         </div>
       </div>
@@ -250,27 +275,11 @@ export function DetailLemburContent({ formId, onClose, inPopup = false, onFormLo
         {success && <Alert severity="success" onClose={() => setSuccess('')}>{success}</Alert>}
         {form.catatanApproval && (
           <Alert severity={form.status === 'approved' ? 'success' : 'error'}>
-            <strong>Catatan Approval:</strong> {form.catatanApproval}
+            <strong>Approval Notes:</strong> {form.catatanApproval}
           </Alert>
         )}
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-          <StatusChip status={form.status} />
-          {form.kodeDivisi && <Chip label={form.kodeDivisi} color="primary" size="small" />}
-          {form.lemburPada && (
-            <Chip
-              label={form.lemburPada}
-              size="small"
-              color={form.lemburPada === 'Hari Libur' ? 'error' : 'default'}
-              variant="outlined"
-            />
-          )}
-        </Box>
-
-        <div
-          className="approval-detail-summary"
-          style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8 }}
-        >
+        <div className="approval-detail-summary">
           {infoItems.map(({ label, value }) => (
             <div
               key={label}
@@ -279,7 +288,7 @@ export function DetailLemburContent({ formId, onClose, inPopup = false, onFormLo
               <p style={{ margin: 0, fontSize: '0.7rem', fontFamily: 'IBM Plex Mono, monospace', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#7f7f7f', marginBottom: 4 }}>
                 {label}
               </p>
-              <strong style={{ color: 'var(--primary-blue)', fontSize: '0.92rem' }}>{value || '—'}</strong>
+              <strong style={{ color: 'var(--primary-blue)', fontSize: '0.92rem' }}>{value || '-'}</strong>
             </div>
           ))}
         </div>
@@ -287,26 +296,26 @@ export function DetailLemburContent({ formId, onClose, inPopup = false, onFormLo
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <p style={{ margin: 0, color: 'var(--primary-blue)', fontSize: '0.88rem', fontWeight: 700 }}>
-              Detail Karyawan — {entries.length} orang
+              Employee Details - {entries.length} employees
             </p>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <FactCheckRoundedIcon fontSize="small" color="action" />
               <Typography variant="body2" fontWeight={800} color="secondary.main">{kompensasiSummary}</Typography>
             </Box>
           </div>
-          <div className="users-table-wrapper approval-entry-table-wrapper">
+          <div className="users-table-wrapper approval-entry-table-wrapper" style={{ maxHeight: 280, overflowY: 'auto', overflowX: 'auto' }}>
             <table className="users-table approval-mobile-table">
               <thead>
                 <tr>
                   <th>Internal ID</th>
-                  <th>Nama</th>
-                  <th>ID Karyawan</th>
-                  <th>Tgl Lembur</th>
-                  <th>Mulai</th>
-                  <th>Selesai</th>
-                  <th>Tugas</th>
-                  <th>Hasil</th>
-                  <th>Kompensasi</th>
+                  <th>Name</th>
+                  <th>Employee ID</th>
+                  <th>Overtime Date</th>
+                  <th>Start</th>
+                  <th>End</th>
+                  <th>Task</th>
+                  <th>Result</th>
+                  <th>Compensation</th>
                   <th>Approval</th>
                 </tr>
               </thead>
@@ -318,22 +327,22 @@ export function DetailLemburContent({ formId, onClose, inPopup = false, onFormLo
                         {entry.internalId || '-'}
                       </span>
                     </td>
-                    <td data-label="Nama"><strong className="users-table__name">{entry.nama}</strong></td>
-                    <td data-label="ID Karyawan">
+                    <td data-label="Name"><strong className="users-table__name">{entry.nama}</strong></td>
+                    <td data-label="Employee ID">
                       <span className="users-table__status users-table__status--inline users-table__status--app">
                         {entry.idKaryawan || '-'}
                       </span>
                     </td>
-                    <td data-label="Tgl Lembur">{entry.tanggalLembur}</td>
-                    <td data-label="Mulai">{entry.jamMulai}</td>
-                    <td data-label="Selesai">{entry.jamSelesai}</td>
-                    <td data-label="Tugas" style={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                    <td data-label="Overtime Date">{entry.tanggalLembur}</td>
+                    <td data-label="Start">{entry.jamMulai}</td>
+                    <td data-label="End">{entry.jamSelesai}</td>
+                    <td data-label="Task" style={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
                       {entry.tugas || '-'}
                     </td>
-                    <td data-label="Hasil" style={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                    <td data-label="Result" style={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
                       {entry.hasil || '-'}
                     </td>
-                    <td data-label="Kompensasi">
+                    <td data-label="Compensation">
                       <strong style={{ color: '#6d3fa0' }}>{formatKompensasi(entry.kompensasi)}</strong>
                     </td>
                     <td data-label="Approval"><ApprovalBadge value={entry.approval} /></td>
@@ -358,15 +367,15 @@ export function DetailLemburContent({ formId, onClose, inPopup = false, onFormLo
 
         {form.catatanApproval && (
           <Alert severity={form.status === 'approved' ? 'success' : 'error'}>
-            <strong>Catatan Approval:</strong> {form.catatanApproval}
+            <strong>Approval Notes:</strong> {form.catatanApproval}
           </Alert>
         )}
 
         <CardBigBox
-          eyebrow="Detail Form"
+          eyebrow="Form Details"
           title={form.nomerForm}
           className="detail-form-card"
-          description={`${form.department || '-'} — ${form.tanggalPengajuan || '-'}`}
+          description={`${form.department || '-'} - ${form.tanggalPengajuan || '-'}`}
           headerAction={(
             <div className="detail-card-actions">
               {onClose && (
@@ -376,12 +385,12 @@ export function DetailLemburContent({ formId, onClose, inPopup = false, onFormLo
                   onClick={onClose}
                 >
                   <ChevronLeft size={15} />
-                  Kembali
+                  Back
                 </CreateButton>
               )}
               <CreateButton variant="detail" onClick={() => setPrintPreview(true)}>
                 <Printer size={15} />
-                Cetak
+                Print
               </CreateButton>
               {form.status === 'pending' && (
                 <>
@@ -392,7 +401,7 @@ export function DetailLemburContent({ formId, onClose, inPopup = false, onFormLo
                     onClick={() => { setDialog({ open: true, status: 'approved', level: 2 }); setCatatan(''); }}
                   >
                     <Check size={15} />
-                    Setujui
+                    Approve
                   </button>
                   <button
                     type="button"
@@ -401,25 +410,60 @@ export function DetailLemburContent({ formId, onClose, inPopup = false, onFormLo
                     onClick={() => { setDialog({ open: true, status: 'rejected', level: 0 }); setCatatan(''); }}
                   >
                     <XClose size={15} />
-                    Tolak
+                    Reject
                   </button>
                 </>
               )}
             </div>
           )}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 2 }}>
-            <StatusChip status={form.status} />
-            {form.kodeDivisi && <Chip label={form.kodeDivisi} color="primary" size="small" />}
-            {form.lemburPada && (
-              <Chip
-                label={form.lemburPada}
-                size="small"
-                color={form.lemburPada === 'Hari Libur' ? 'error' : 'default'}
-                variant="outlined"
-              />
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            marginBottom: 16,
+            borderRadius: 12,
+            overflow: 'hidden',
+            border: '1px solid rgba(26,42,87,0.10)',
+            background: '#fff',
+            boxShadow: '0 1px 6px rgba(26,42,87,0.07)',
+            flexWrap: 'wrap',
+            maxWidth: '100%',
+          }}>
+            <Box sx={{ px: 1.5, py: 0.75, display: 'flex', alignItems: 'center' }}>
+              <DetailStatusChip status={form.status} />
+            </Box>
+            {form.kodeDivisi && (
+              <>
+                <div style={{ width: 1, alignSelf: 'stretch', background: 'rgba(26,42,87,0.09)', flexShrink: 0 }} />
+                <span style={{
+                  padding: '6px 14px',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  color: '#1a2a57',
+                  background: 'rgba(26,42,87,0.04)',
+                  letterSpacing: '0.02em',
+                  whiteSpace: 'nowrap',
+                }}>
+                  {form.kodeDivisi}
+                </span>
+              </>
             )}
-          </Box>
+            {form.lemburPada && (
+              <>
+                <div style={{ width: 1, alignSelf: 'stretch', background: 'rgba(26,42,87,0.09)', flexShrink: 0 }} />
+                <span style={{
+                  padding: '6px 14px',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  whiteSpace: 'nowrap',
+                  color: form.lemburPada === 'Hari Libur' ? '#dc2626' : '#475569',
+                  background: form.lemburPada === 'Hari Libur' ? 'rgba(220,38,38,0.05)' : 'transparent',
+                }}>
+                  {form.lemburPada}
+                </span>
+              </>
+            )}
+          </div>
 
           <div className="detail-info-summary">
             {infoItems.map(({ label, value }) => (
@@ -443,15 +487,15 @@ export function DetailLemburContent({ formId, onClose, inPopup = false, onFormLo
                 }}>
                   {label}
                 </p>
-                <strong style={{ color: 'var(--primary-blue)', fontSize: '0.92rem' }}>{value || '—'}</strong>
+                <strong style={{ color: 'var(--primary-blue)', fontSize: '0.92rem' }}>{value || '-'}</strong>
               </div>
             ))}
           </div>
         </CardBigBox>
 
         <CardBigBox
-          eyebrow="Detail Lembur"
-          title={`Karyawan (${entries.length} entri)`}
+          eyebrow="Overtime Details"
+          title={`Employees (${entries.length} entries)`}
           headerAction={(
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <FactCheckRoundedIcon fontSize="small" color="action" />
@@ -465,53 +509,68 @@ export function DetailLemburContent({ formId, onClose, inPopup = false, onFormLo
             component={Paper}
             elevation={0}
             className="detail-table"
-            sx={{ '@media (max-width: 768px)': { display: 'none' } }}
+            sx={{
+              overflowX: 'auto',
+              '@media (max-width: 768px)': { display: 'none' },
+            }}
           >
             <Table
               size="small"
               sx={{
-                width: '100%',
-                tableLayout: 'fixed',
-                '& .MuiTableCell-root': { px: 1, whiteSpace: 'normal', wordBreak: 'break-word' },
+                minWidth: 900,
+                '& .MuiTableCell-root': { px: 1.25, py: 0.85, fontSize: '0.82rem' },
+                '& .MuiTableHead-root .MuiTableCell-root': {
+                  fontWeight: 800, fontSize: '0.74rem', color: '#607089',
+                  background: 'rgba(241,245,249,0.98)',
+                  borderBottom: '1px solid rgba(26,42,87,0.10)',
+                  whiteSpace: 'nowrap',
+                },
+                '& .MuiTableBody-root .MuiTableRow-root:hover td': {
+                  background: 'rgba(237,242,250,0.7)',
+                },
               }}
             >
               <TableHead>
                 <TableRow>
-                  <TableCell>Internal Id</TableCell>
-                  <TableCell>Nama</TableCell>
-                  <TableCell>ID Karyawan</TableCell>
-                  <TableCell>Tanggal Lembur</TableCell>
-                  <TableCell>Jam Mulai</TableCell>
-                  <TableCell>Jam Selesai</TableCell>
-                  <TableCell>Tugas</TableCell>
-                  <TableCell>Hasil</TableCell>
-                  <TableCell>Kompensasi</TableCell>
-                  <TableCell>Approval</TableCell>
+                  <TableCell sx={{ width: 110 }}>Internal ID</TableCell>
+                  <TableCell sx={{ minWidth: 130 }}>Name</TableCell>
+                  <TableCell sx={{ width: 110 }}>Employee ID</TableCell>
+                  <TableCell sx={{ width: 115, whiteSpace: 'nowrap' }}>Overtime Date</TableCell>
+                  <TableCell sx={{ width: 70 }}>Start</TableCell>
+                  <TableCell sx={{ width: 70 }}>End</TableCell>
+                  <TableCell>Task</TableCell>
+                  <TableCell>Result</TableCell>
+                  <TableCell sx={{ width: 110 }}>Compensation</TableCell>
+                  <TableCell sx={{ width: 95 }}>Approval</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {entries.map((entry, index) => (
-                  <TableRow key={index} hover sx={{ bgcolor: index % 2 === 0 ? 'grey.50' : 'white' }}>
+                  <TableRow key={index} hover sx={{ bgcolor: index % 2 === 0 ? 'rgba(248,250,252,0.7)' : 'white', transition: 'background .15s' }}>
                     <TableCell>
-                      <Chip label={entry.internalId || '-'} size="small" variant="outlined" />
+                      <span className="users-table__status users-table__status--inline users-table__status--pending" style={{ fontSize: '0.75rem' }}>
+                        {entry.internalId || '-'}
+                      </span>
                     </TableCell>
                     <TableCell>
-                      <Typography variant="body2" fontWeight={700}>{entry.nama}</Typography>
+                      <Typography variant="body2" fontWeight={700} noWrap title={entry.nama}>{entry.nama}</Typography>
                     </TableCell>
                     <TableCell>
-                      <Chip label={entry.idKaryawan || '-'} size="small" variant="outlined" color="primary" />
+                      <span className="users-table__status users-table__status--inline users-table__status--app" style={{ fontSize: '0.75rem' }}>
+                        {entry.idKaryawan || '-'}
+                      </span>
                     </TableCell>
-                    <TableCell>{entry.tanggalLembur}</TableCell>
-                    <TableCell>{entry.jamMulai}</TableCell>
-                    <TableCell>{entry.jamSelesai}</TableCell>
-                    <TableCell>
-                      <Typography variant="body2">{entry.tugas || '-'}</Typography>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>{entry.tanggalLembur}</TableCell>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>{entry.jamMulai}</TableCell>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>{entry.jamSelesai}</TableCell>
+                    <TableCell sx={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                      <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>{entry.tugas || '-'}</Typography>
+                    </TableCell>
+                    <TableCell sx={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                      <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>{entry.hasil || '-'}</Typography>
                     </TableCell>
                     <TableCell>
-                      <Typography variant="body2">{entry.hasil || '-'}</Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" fontWeight={800} color="secondary.main">
+                      <Typography variant="body2" fontWeight={800} color="secondary.main" noWrap>
                         {formatKompensasi(entry.kompensasi)}
                       </Typography>
                     </TableCell>
@@ -527,9 +586,9 @@ export function DetailLemburContent({ formId, onClose, inPopup = false, onFormLo
               <table className="users-table approval-mobile-table">
                 <thead>
                   <tr>
-                    <th>Internal ID</th><th>Nama</th><th>ID Karyawan</th>
-                    <th>Tgl Lembur</th><th>Mulai</th><th>Selesai</th>
-                    <th>Tugas</th><th>Hasil</th><th>Kompensasi</th><th>Approval</th>
+                    <th>Internal ID</th><th>Name</th><th>Employee ID</th>
+                    <th>Overtime Date</th><th>Start</th><th>End</th>
+                    <th>Task</th><th>Result</th><th>Compensation</th><th>Approval</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -540,24 +599,24 @@ export function DetailLemburContent({ formId, onClose, inPopup = false, onFormLo
                           {entry.internalId || '-'}
                         </span>
                       </td>
-                      <td data-label="Nama">
+                      <td data-label="Name">
                         <strong className="users-table__name">{entry.nama}</strong>
                       </td>
-                      <td data-label="ID Karyawan">
+                      <td data-label="Employee ID">
                         <span className="users-table__status users-table__status--inline users-table__status--app">
                           {entry.idKaryawan || '-'}
                         </span>
                       </td>
-                      <td data-label="Tgl Lembur">{entry.tanggalLembur}</td>
-                      <td data-label="Mulai">{entry.jamMulai}</td>
-                      <td data-label="Selesai">{entry.jamSelesai}</td>
-                      <td data-label="Tugas" style={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                      <td data-label="Overtime Date">{entry.tanggalLembur}</td>
+                      <td data-label="Start">{entry.jamMulai}</td>
+                      <td data-label="End">{entry.jamSelesai}</td>
+                      <td data-label="Task" style={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
                         {entry.tugas || '-'}
                       </td>
-                      <td data-label="Hasil" style={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                      <td data-label="Result" style={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
                         {entry.hasil || '-'}
                       </td>
-                      <td data-label="Kompensasi">
+                      <td data-label="Compensation">
                         <strong style={{ color: '#6d3fa0' }}>{formatKompensasi(entry.kompensasi)}</strong>
                       </td>
                       <td data-label="Approval"><ApprovalBadge value={entry.approval} /></td>
@@ -578,9 +637,9 @@ export function DetailLemburContent({ formId, onClose, inPopup = false, onFormLo
           <div className="dashboard-popup" style={{ width: 'min(100%, 480px)' }}>
             <div className="dashboard-popup__header">
               <div>
-                <p className="dashboard-popup__eyebrow">Konfirmasi</p>
+                <p className="dashboard-popup__eyebrow">Confirmation</p>
                 <h3 className="dashboard-popup__title">
-                  {dialog.status === 'approved' ? 'Setujui Form Lembur' : 'Tolak Form Lembur'}
+                  {dialog.status === 'approved' ? 'Approve Overtime Form' : 'Reject Overtime Form'}
                 </h3>
               </div>
               <button
@@ -596,32 +655,32 @@ export function DetailLemburContent({ formId, onClose, inPopup = false, onFormLo
               <div style={{ background: 'rgba(248,249,250,0.95)', borderRadius: 12, padding: '12px 14px', marginBottom: 16, display: 'grid', gap: 4 }}>
                 <Typography variant="body2"><strong>Form:</strong> {form.nomerForm}</Typography>
                 <Typography variant="body2"><strong>Department:</strong> {form.department}</Typography>
-                <Typography variant="body2"><strong>Diperintah Oleh:</strong> {form.diperintahOleh}</Typography>
-                <Typography variant="body2"><strong>Kompensasi:</strong> {kompensasiSummary}</Typography>
+                <Typography variant="body2"><strong>Requested By:</strong> {form.diperintahOleh}</Typography>
+                <Typography variant="body2"><strong>Compensation:</strong> {kompensasiSummary}</Typography>
               </div>
 
               {dialog.status === 'approved' && (
                 <div className="register-user-popup__field" style={{ marginBottom: 14 }}>
-                  <label className="register-user-popup__label">Level Approval</label>
+                  <label className="register-user-popup__label">Approval Level</label>
                   <select
                     className="register-user-popup__select"
                     value={dialog.level}
                     onChange={(e) => setDialog((prev) => ({ ...prev, level: Number(e.target.value) }))}
                   >
-                    <option value={1}>Level 1 (Approval Pertama)</option>
-                    <option value={2}>Level 2 (Approval Final)</option>
+                    <option value={1}>Level 1 (First Approval)</option>
+                    <option value={2}>Level 2 (Final Approval)</option>
                   </select>
                 </div>
               )}
 
               <div className="register-user-popup__field">
-                <label className="register-user-popup__label">Catatan / Keterangan</label>
+                <label className="register-user-popup__label">Notes / Remarks</label>
                 <textarea
                   className="register-user-popup__input"
                   rows={3}
                   placeholder={dialog.status === 'approved'
-                    ? 'Contoh: Disetujui sesuai kebutuhan operasional...'
-                    : 'Contoh: Ditolak - tidak memenuhi prosedur...'}
+                    ? 'Example: Approved according to operational needs...'
+                    : 'Example: Rejected - does not meet the procedure...'}
                   value={catatan}
                   onChange={(e) => setCatatan(e.target.value)}
                 />
@@ -634,14 +693,14 @@ export function DetailLemburContent({ formId, onClose, inPopup = false, onFormLo
                 className="dashboard-popup__button dashboard-popup__button--secondary"
                 onClick={() => setDialog({ ...dialog, open: false })}
               >
-                Batal
+                Cancel
               </button>
               <button
                 type="button"
                 className={`dashboard-popup__button ${dialog.status === 'approved' ? 'dashboard-popup__button--primary' : 'dashboard-popup__button--danger'}`}
                 onClick={handleApproval}
               >
-                {dialog.status === 'approved' ? 'Ya, Setujui' : 'Ya, Tolak'}
+                {dialog.status === 'approved' ? 'Yes, Approve' : 'Yes, Reject'}
               </button>
             </div>
           </div>

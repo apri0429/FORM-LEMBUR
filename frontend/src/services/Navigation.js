@@ -1,11 +1,12 @@
 import {
   LayoutDashboard,
-  Edit03,
-  FileText01,
-  Calendar01,
+  FilePlus,
+  ClipboardList,
+  ClipboardCheck,
   Users01,
   Table01,
   Settings01,
+  Chart01,
   LogOut01,
 } from '../components/template/TemplateIcons.jsx'
 
@@ -17,6 +18,7 @@ export const implementedNavigationPaths = [
   '/form/baru',
   '/approval',
   '/approved',
+  '/laporan',
   '/admin/employees',
   '/admin/departments',
 ]
@@ -32,19 +34,28 @@ export const primaryNavigationItems = [
     id: 'buat-form',
     label: 'Buat Form',
     href: '/form/baru',
-    icon: Edit03,
+    icon: FilePlus,
   },
   {
     id: 'approval',
     label: 'Approval',
     href: '/approval',
-    icon: FileText01,
+    icon: ClipboardList,
   },
   {
     id: 'approved',
     label: 'Approved',
     href: '/approved',
-    icon: Calendar01,
+    icon: ClipboardCheck,
+  },
+]
+
+export const hrNavigationItems = [
+  {
+    id: 'laporan',
+    label: 'Laporan',
+    href: '/laporan',
+    icon: Chart01,
   },
 ]
 

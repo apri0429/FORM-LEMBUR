@@ -6,6 +6,7 @@ function CardBigBox({
   title,
   description,
   headerAction,
+  toolbar,
   children,
   footer,
   className,
@@ -14,6 +15,7 @@ function CardBigBox({
 }) {
   const hasChildren = children !== undefined && children !== null
   const hasFooter = footer !== undefined && footer !== null
+  const hasToolbar = toolbar !== undefined && toolbar !== null
   const panelClassName = ['dashboard-panel', className].filter(Boolean).join(' ')
   const headerClassName = [
     'dashboard-panel__header',
@@ -41,6 +43,7 @@ function CardBigBox({
         </div>
       ) : null}
 
+      {hasToolbar ? <div className="dashboard-panel__toolbar">{toolbar}</div> : null}
       {hasChildren ? <div className={bodyClassName}>{children}</div> : null}
       {hasFooter ? <div className="dashboard-panel__footer">{footer}</div> : null}
     </Component>

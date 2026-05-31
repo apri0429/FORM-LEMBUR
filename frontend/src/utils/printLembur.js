@@ -4,12 +4,19 @@ function esc(str) {
 
 function formatStatus(status) {
   const map = {
-    approved: 'Disetujui',
-    partially_approved: 'Sebagian Disetujui',
-    rejected: 'Ditolak',
-    pending: 'Menunggu Approval',
+    approved: 'Approved',
+    partially_approved: 'Partially Approved',
+    rejected: 'Rejected',
+    pending: 'Pending Approval',
   };
   return map[status] || esc(status) || '-';
+}
+
+function formatLemburPada(value) {
+  const text = String(value ?? '').trim();
+  if (text === 'Hari Libur') return 'Holiday';
+  if (text === 'Hari Kerja') return 'Workday';
+  return text || '-';
 }
 
 export function printLemburForm(form) {
@@ -37,10 +44,10 @@ export function printLemburForm(form) {
   }).join('');
 
   const html = `<!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Form Lembur - ${esc(form.nomerForm)}</title>
+  <title>Overtime Form - ${esc(form.nomerForm)}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -171,7 +178,7 @@ export function printLemburForm(form) {
 <body>
 
   <div class="print-title">
-    <h1>Form Perintah Lembur</h1>
+    <h1>Overtime Order Form</h1>
     <div class="form-number">No. Form: <strong>${esc(form.nomerForm) || '-'}</strong></div>
   </div>
 
@@ -179,7 +186,7 @@ export function printLemburForm(form) {
 
   <div class="print-meta">
     <div class="print-meta-row">
-      <span class="print-meta-label">Divisi</span>
+      <span class="print-meta-label">Division</span>
       <span class="print-meta-value">${esc(form.kodeDivisi) || '-'}</span>
     </div>
     <div class="print-meta-row">
@@ -191,15 +198,15 @@ export function printLemburForm(form) {
       <span class="print-meta-value">${esc(form.department) || '-'}</span>
     </div>
     <div class="print-meta-row">
-      <span class="print-meta-label">Lembur Pada</span>
-      <span class="print-meta-value">${esc(form.lemburPada) || '-'}</span>
+      <span class="print-meta-label">Overtime Day</span>
+      <span class="print-meta-value">${esc(formatLemburPada(form.lemburPada))}</span>
     </div>
     <div class="print-meta-row">
-      <span class="print-meta-label">Diperintah Oleh</span>
+      <span class="print-meta-label">Requested By</span>
       <span class="print-meta-value">${esc(form.diperintahOleh) || '-'}</span>
     </div>
     <div class="print-meta-row">
-      <span class="print-meta-label">Tgl Pengajuan</span>
+      <span class="print-meta-label">Submission Date</span>
       <span class="print-meta-value">${esc(form.tanggalPengajuan) || '-'}</span>
     </div>
     <div class="print-meta-row">
@@ -218,14 +225,14 @@ export function printLemburForm(form) {
     <thead>
       <tr>
         <th class="col-no">No</th>
-        <th class="col-nama">Nama</th>
-        <th class="col-id">ID Karyawan</th>
-        <th class="col-tgl">Tgl Lembur</th>
-        <th class="col-waktu">Mulai</th>
-        <th class="col-waktu">Selesai</th>
-        <th class="col-tugas">Tugas</th>
-        <th class="col-hasil">Hasil</th>
-        <th class="col-komp">Kompensasi</th>
+        <th class="col-nama">Name</th>
+        <th class="col-id">Employee ID</th>
+        <th class="col-tgl">Overtime Date</th>
+        <th class="col-waktu">Start</th>
+        <th class="col-waktu">End</th>
+        <th class="col-tugas">Task</th>
+        <th class="col-hasil">Result</th>
+        <th class="col-komp">Compensation</th>
         <th class="col-status">&#9679;</th>
       </tr>
     </thead>
@@ -236,15 +243,15 @@ export function printLemburForm(form) {
 
   <div class="print-signatures">
     <div class="sig-box">
-      <div class="sig-box__label">Diperintahkan oleh</div>
+      <div class="sig-box__label">Requested by</div>
       <div class="sig-box__name">${esc(form.diperintahOleh) || '___________________'}</div>
     </div>
     <div class="sig-box">
-      <div class="sig-box__label">Diketahui oleh</div>
+      <div class="sig-box__label">Acknowledged by</div>
       <div class="sig-box__name">___________________</div>
     </div>
     <div class="sig-box">
-      <div class="sig-box__label">Disetujui oleh</div>
+      <div class="sig-box__label">Approved by</div>
       <div class="sig-box__name">___________________</div>
     </div>
   </div>
@@ -254,7 +261,7 @@ export function printLemburForm(form) {
 
   const win = window.open('', '_blank', 'width=960,height=700');
   if (!win) {
-    alert('Popup diblokir oleh browser. Izinkan popup untuk mencetak form.');
+    alert('Popup was blocked by the browser. Please allow popups to print the form.');
     return;
   }
   win.document.write(html);

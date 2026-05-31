@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { memo, useMemo, useState, useTransition } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 
 import { ChevronLeft, ChevronRight, XClose } from './TemplateIcons.jsx'
@@ -49,7 +49,7 @@ function getInitiallyExpandedGroups(items, currentPath) {
   }, {})
 }
 
-function SidebarNavItem({
+const SidebarNavItem = memo(function SidebarNavItem({
   item,
   selectedPath,
   collapsed,
@@ -66,10 +66,10 @@ function SidebarNavItem({
   const submenuId = hasChildren ? `${getGroupKey(item)}-submenu` : undefined
   const className = [
     'nav-item',
+    'nav-item--button',
     active ? 'active' : '',
     hasChildren ? 'nav-item--accordion' : '',
     expanded ? 'nav-item--expanded' : '',
-    isButton ? 'nav-item--button' : '',
     depth > 0 ? 'nav-item--child' : '',
     item.variant === 'danger' ? 'logout-item' : '',
   ]
@@ -105,29 +105,17 @@ function SidebarNavItem({
 
   return (
     <>
-      {isButton ? (
-        <button
-          type="button"
-          className={className}
-          data-tooltip={collapsed ? item.label : undefined}
-          aria-controls={submenuId}
-          aria-current={active && !hasChildren ? 'page' : undefined}
-          aria-expanded={hasChildren ? expanded : undefined}
-          onClick={handleClick}
-        >
-          {content}
-        </button>
-      ) : (
-        <a
-          href={item.href}
-          className={className}
-          data-tooltip={collapsed ? item.label : undefined}
-          aria-current={active ? 'page' : undefined}
-          onClick={handleClick}
-        >
-          {content}
-        </a>
-      )}
+      <button
+        type="button"
+        className={className}
+        data-tooltip={collapsed ? item.label : undefined}
+        aria-controls={submenuId}
+        aria-current={active && !hasChildren ? 'page' : undefined}
+        aria-expanded={hasChildren ? expanded : undefined}
+        onClick={handleClick}
+      >
+        {content}
+      </button>
 
       {hasChildren && !collapsed ? (
         <div
@@ -151,7 +139,7 @@ function SidebarNavItem({
       ) : null}
     </>
   )
-}
+})
 
 function Sidebar({
   collapsed = false,
@@ -168,6 +156,7 @@ function Sidebar({
   const { pathname } = useLocation()
   const activePath = pathname
   const [expandedGroups, setExpandedGroups] = useState({})
+  const [, startTransition] = useTransition()
   const initials = getInitials(userName)
   const activeExpandedGroups = useMemo(
     () => getInitiallyExpandedGroups([...primaryItems, ...secondaryItems], activePath),
@@ -209,7 +198,9 @@ function Sidebar({
       const nextPath = item.href || defaultNavigationPath
 
       if (window.location.pathname !== nextPath) {
-        navigate(nextPath)
+        startTransition(() => {
+          navigate(nextPath)
+        })
       }
     }
 

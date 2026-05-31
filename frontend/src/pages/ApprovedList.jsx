@@ -3,12 +3,10 @@ import { createPortal } from 'react-dom';
 import {
   Alert,
   Box,
-  Button,
   Chip,
   CircularProgress,
   Collapse,
   Container,
-  IconButton,
   MenuItem,
   Paper,
   Table,
@@ -17,34 +15,67 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  TableSortLabel,
   TextField,
   Typography,
 } from '@mui/material';
-import CalendarMonthRoundedIcon from '@mui/icons-material/CalendarMonthRounded';
+import CancelIcon from '@mui/icons-material/Cancel';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import FactCheckRoundedIcon from '@mui/icons-material/FactCheckRounded';
+import FilterListRoundedIcon from '@mui/icons-material/FilterListRounded';
+import ApartmentRoundedIcon from '@mui/icons-material/ApartmentRounded';
 import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
+import LocalOfferRoundedIcon from '@mui/icons-material/LocalOfferRounded';
+import AssignmentIndRoundedIcon from '@mui/icons-material/AssignmentIndRounded';
+import BadgeRoundedIcon from '@mui/icons-material/BadgeRounded';
+import ManageAccountsRoundedIcon from '@mui/icons-material/ManageAccountsRounded';
+import WorkRoundedIcon from '@mui/icons-material/WorkRounded';
+import EventNoteRoundedIcon from '@mui/icons-material/EventNoteRounded';
 import RestoreRoundedIcon from '@mui/icons-material/RestoreRounded';
+import SearchOffRoundedIcon from '@mui/icons-material/SearchOffRounded';
+
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
 import CreateButton from '../components/button/CreateButton';
 import CardBigBox from '../components/cardbox/CardBigBox';
 import { ChevronDown, Printer, SearchMd, XClose } from '../components/template/TemplateIcons.jsx';
 import { useAuth } from '../context/AuthContext';
-import StatusChip from '../components/StatusChip';
 import { DetailLemburContent } from './DetailLembur';
 import PrintPreviewModal from '../components/PrintPreviewModal';
-import { printLemburForm } from '../utils/printLembur';
 
 const API = '/api/lembur';
-const APPROVED_STATUSES = ['approved', 'partially_approved', 'rejected'];
 const ROWS_OPTIONS = [10, 25, 50, 100];
 const BOD_KEYWORDS = ['director', 'commissioner', 'president director'];
 const MANAGER_KEYWORDS = ['manager', 'supervisor', 'spv', 'kepala', 'head', 'koordinator', 'lead'];
+const STATUS_CHIP_MAP = {
+  approved: { label: 'Disetujui', color: 'success', icon: <CheckCircleIcon fontSize="small" /> },
+  rejected:  { label: 'Ditolak',   color: 'error',   icon: <CancelIcon fontSize="small" /> },
+};
+
+const FORM_TYPE_CHIP_MAP = {
+  staff:        { label: 'Staff',        color: '#1a2a57', bg: 'rgba(26,42,87,0.08)',    icon: BadgeRoundedIcon },
+  manager:      { label: 'Manager',      color: '#0277bd', bg: 'rgba(2,119,189,0.1)',    icon: ManageAccountsRoundedIcon },
+  outsourcing:  { label: 'Outsourcing',  color: '#e65100', bg: 'rgba(230,81,0,0.09)',   icon: WorkRoundedIcon },
+  harian_lepas: { label: 'Harian Lepas', color: '#6a1b9a', bg: 'rgba(106,27,154,0.09)', icon: EventNoteRoundedIcon },
+};
+
+function FormTypeBadge({ jenisForm }) {
+  const cfg = FORM_TYPE_CHIP_MAP[jenisForm];
+  if (!cfg) return null;
+  const Icon = cfg.icon;
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      height: 24, padding: '0 8px', borderRadius: 12,
+      fontSize: '0.8125rem', fontWeight: 700,
+      color: cfg.color, background: cfg.bg, whiteSpace: 'nowrap',
+    }}>
+      <Icon style={{ fontSize: 14, flexShrink: 0 }} />
+      {cfg.label}
+    </span>
+  );
+}
 
 const pageSx = {
   height: '100%',
@@ -53,28 +84,16 @@ const pageSx = {
   maxWidth: '100%',
   display: 'flex',
   flexDirection: 'column',
+  gap: '14px',
   overflow: 'hidden',
   '& .approved-main-panel': {
     flex: 1,
-    height: '100%',
     minHeight: 0,
     maxHeight: '100%',
     width: '100%',
-    maxWidth: '100%',
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
-  },
-  '& .approved-main-panel .dashboard-panel__header': {
-    flexShrink: 0,
-  },
-  '& .approved-main-panel .dashboard-panel__header--split': {
-    gridTemplateColumns: 'minmax(0, 1fr) auto',
-    alignItems: 'start',
-    gap: 2,
-  },
-  '& .approved-main-panel .dashboard-panel__action': {
-    justifySelf: 'end',
   },
   '& .approved-main-panel__body': {
     flex: 1,
@@ -83,63 +102,27 @@ const pageSx = {
     display: 'flex',
     flexDirection: 'column',
   },
-  '& .approved-list-pagination': {
-    flexShrink: 0,
-  },
-  '@media (max-width: 768px)': {
-    '& .approved-main-panel': {
-      padding: '16px',
-      borderRadius: '18px',
-    },
-    '& .approved-main-panel .dashboard-panel__header--split': {
-      gridTemplateColumns: '1fr',
-      gap: 1.25,
-      paddingBottom: '12px',
-      borderBottom: '1px solid rgba(26, 42, 87, 0.07)',
-    },
-    '& .approved-main-panel .dashboard-panel__action': {
-      justifySelf: 'stretch',
-      width: '100%',
-    },
-    '& .approved-main-panel .approval-filter-bar': {
-      width: '100%',
-      justifyContent: 'stretch',
-    },
-    '& .approved-main-panel .approval-filter-bar__field, & .approved-main-panel .approval-filter-bar__input--search, & .approved-main-panel .approval-filter-bar__select': {
-      width: '100%',
-    },
-    '& .approved-list-pagination': {
-      alignItems: 'stretch',
-      gap: 1,
-    },
-    '& .approved-list-pagination > .MuiBox-root': {
-      justifyContent: 'space-between',
-    },
-  },
 };
 
-const cellSx = {
-  px: 1.25,
-  py: 0.75,
-  whiteSpace: 'normal',
-  wordBreak: 'break-word',
-};
+
+function getProcessedBy(form) {
+  if (!form) return '-';
+  if (form.status === 'rejected') return form.rejectedBy || '-';
+  return form.approvedBy || '-';
+}
 
 function formatKompensasi(value) {
   const text = String(value ?? '').trim();
   return text || '-';
 }
 
-function getKompensasiSummary(form) {
-  const values = form.entries
-    ?.map((entry) => formatKompensasi(entry.kompensasi))
-    .filter((value) => value !== '-') || [];
+function formatLemburPada(value) {
+  return String(value ?? '').trim() || '-';
+}
 
-  if (!values.length) return '-';
-
-  const uniqueValues = [...new Set(values)];
-  if (uniqueValues.length <= 2) return uniqueValues.join(', ');
-  return `${uniqueValues.slice(0, 2).join(', ')} +${uniqueValues.length - 2} lainnya`;
+function ApprovedStatusChip({ status }) {
+  const config = STATUS_CHIP_MAP[status] ?? { label: status || '-', color: 'default' };
+  return <Chip label={config.label} color={config.color} size="small" icon={config.icon} />;
 }
 
 function isAdminUser(user) {
@@ -149,41 +132,34 @@ function isAdminUser(user) {
   return user.role === 'admin' || user.department === 'IT' || user.department === 'HCGA' || isBOD;
 }
 
-function canRevertAny(user) {
-  if (!user) return false;
-  const isBOD = BOD_KEYWORDS.some((k) => String(user.jobLevel || '').toLowerCase().includes(k))
-    || user.department === 'Board Of Director';
-  if (user.role === 'admin' || user.department === 'IT' || user.department === 'HCGA' || isBOD) return true;
-  return MANAGER_KEYWORDS.some((k) =>
-    String(user.jobPosition || '').toLowerCase().includes(k) ||
-    String(user.jobLevel || '').toLowerCase().includes(k)
-  );
-}
-
 function canRevertForm(user, form) {
   if (!user || !form) return false;
   const isBOD = BOD_KEYWORDS.some((k) => String(user.jobLevel || '').toLowerCase().includes(k))
     || user.department === 'Board Of Director';
-  if (user.role === 'admin' || user.department === 'IT' || user.department === 'HCGA' || isBOD) return true;
-  
+  if (user.role === 'admin' || user.department === 'IT' || isBOD) return true;
+
+  const isHCGA = user.department === 'HCGA';
   const isManager = MANAGER_KEYWORDS.some((k) =>
     String(user.jobPosition || '').toLowerCase().includes(k) ||
     String(user.jobLevel || '').toLowerCase().includes(k)
   );
-  
-  if (!isManager) return false;
+
+  if (!isHCGA && !isManager) return false;
   return form.department === user.department;
 }
 
 export default function ApprovedList() {
   const { user } = useAuth();
-  const navigate = useNavigate();
-  const [allForms, setAllForms] = useState([]);
+
+  const [forms, setForms] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [divisiOptions, setDivisiOptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterDivisi, setFilterDivisi] = useState('');
+  const [filterJenisForm, setFilterJenisForm] = useState('');
   const [expandedId, setExpandedId] = useState(null);
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -191,214 +167,173 @@ export default function ApprovedList() {
   const [reverting, setReverting] = useState(false);
   const [detailForm, setDetailForm] = useState(null);
   const [printForm, setPrintForm] = useState(null);
-  const [loadedDetailForm, setLoadedDetailForm] = useState(null);
-  const [filterDate, setFilterDate] = useState('');
-  const [sortConfig, setSortConfig] = useState({ key: '', direction: 'desc' });
-
-  useEffect(() => {
-    setLoading(true);
-    axios.get(API)
-      .then((response) => setAllForms(response.data.data || []))
-      .catch(() => setError('Gagal memuat data. Pastikan server backend berjalan.'))
-      .finally(() => setLoading(false));
-  }, []);
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const isAdmin = isAdminUser(user);
-  const userCanRevertAny = canRevertAny(user);
-  const actionColumnWidth = userCanRevertAny ? 220 : 120;
-  const tableMinWidth = userCanRevertAny ? 1040 : 880;
 
-  // Unique departemen options derived from all approved forms
-  const divisiOptions = [...new Set(
-    allForms
-      .filter((form) => APPROVED_STATUSES.includes(form.status))
-      .map((form) => form.department)
-      .filter(Boolean)
-  )].sort();
+  // Fetch divisi options once on mount
+  useEffect(() => {
+    axios.get(`${API}/filter-options`)
+      .then((r) => setDivisiOptions(r.data.data?.departments || []))
+      .catch(() => {});
+  }, []);
+
+  // Fetch data from server whenever filters/sort/page change
+  useEffect(() => {
+    setLoading(true);
+    const params = {
+      excludePending: 'true',
+      page,
+      rowsPerPage,
+    };
+    if (filterStatus) params.statuses = filterStatus;
+    if (search) params.search = search;
+    if (filterDivisi) params.department = filterDivisi;
+    else if (!isAdmin && user?.department) params.department = user.department;
+    if (filterJenisForm) params.jenisForm = filterJenisForm;
+
+    axios.get(API, { params })
+      .then((r) => { setForms(r.data.data || []); setTotal(r.data.total || 0); })
+      .catch(() => setError('Gagal memuat data. Pastikan server backend sedang berjalan.'))
+      .finally(() => setLoading(false));
+  }, [search, filterStatus, filterDivisi, filterJenisForm, page, rowsPerPage, isAdmin, user?.department, refreshKey]);
+
+  const totalPages = Math.max(1, Math.ceil(total / rowsPerPage));
+  const safePage = Math.min(page, totalPages);
+  const isFiltered = Boolean(search || filterStatus || filterDivisi || filterJenisForm);
+  const isEmptyState = !loading && forms.length === 0;
 
   const handleRevert = () => {
     if (!revertId) return;
     setReverting(true);
     axios.patch(`${API}/${revertId}/status`, { status: 'pending' })
-      .then(() => axios.get(API))
-      .then((response) => {
-        setAllForms(response.data.data || []);
-        setRevertId(null);
-      })
+      .then(() => { setRevertId(null); setRefreshKey((k) => k + 1); })
       .catch(() => setError('Gagal mengembalikan form. Coba lagi.'))
       .finally(() => setReverting(false));
   };
 
-  const forms = allForms
-    .filter((form) => APPROVED_STATUSES.includes(form.status))
-    .filter((form) => isAdmin || form.department === user?.department)
-    .filter((form) => {
-      if (filterStatus && form.status !== filterStatus) return false;
-      if (filterDivisi && form.department !== filterDivisi) return false;
+  const handleSearch = (value) => { setSearch(value); setPage(1); };
+  const handleFilterStatus = (value) => { setFilterStatus(value); setPage(1); };
+  const handleFilterDivisi = (value) => { setFilterDivisi(value); setPage(1); };
+  const handleFilterJenisForm = (value) => { setFilterJenisForm(value); setPage(1); };
+  const handleRowsPerPage = (value) => { setRowsPerPage(Number(value)); setPage(1); };
 
-      if (filterDate) {
-        const [y, m, d] = filterDate.split('-');
-        const dateVariations = [
-          filterDate,
-          `${d}-${m}-${y}`,
-          `${d}/${m}/${y}`,
-        ];
-        const match = dateVariations.some(dateStr => 
-          form.tanggalPengajuan?.includes(dateStr) || form.lemburPada?.includes(dateStr)
-        );
-        if (!match) return false;
-      }
-
-      if (search) {
-        const query = search.toLowerCase();
-        return (
-          form.nomerForm?.toLowerCase().includes(query) ||
-          form.department?.toLowerCase().includes(query) ||
-          form.diperintahOleh?.toLowerCase().includes(query) ||
-          form.kodeDivisi?.toLowerCase().includes(query) ||
-          form.entries?.some((entry) => entry.nama?.toLowerCase().includes(query))
-        );
-      }
-
-      return true;
-    });
-
-  const handleSort = (key) => {
-    let direction = 'asc';
-    if (sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setSortConfig({ key, direction });
+  const selectSx = {
+    width: '100%',
+    minWidth: '100%',
+    '& .MuiOutlinedInput-root': {
+      width: '100%',
+      height: 44,
+      borderRadius: '11px',
+      bgcolor: '#eef2f6',
+      boxShadow: 'none',
+      '& fieldset': { border: '1.5px solid rgba(26,42,87,0.11)' },
+      '&:hover fieldset': { borderColor: 'rgba(26,42,87,0.16)' },
+      '&.Mui-focused': { bgcolor: '#fff', transform: 'translateY(-1px)', boxShadow: '0 0 0 3.5px rgba(37,99,168,0.1)' },
+      '&.Mui-focused fieldset': { borderColor: 'rgba(37,99,168,0.4)' },
+    },
+    '& .MuiInputBase-root': { width: '100%' },
+    '& .MuiSelect-select': {
+      display: 'block', width: '100%', minWidth: 0,
+      py: '0 !important', pl: '4px !important', pr: '36px !important',
+      height: '44px !important', lineHeight: '44px', boxSizing: 'border-box', textOverflow: 'ellipsis',
+    },
+    '& .MuiSelect-icon': { color: '#6b7a90', right: 12 },
   };
 
-  const sortedForms = [...forms].reverse().sort((a, b) => {
-    if (!sortConfig.key) return 0;
-
-    const aValue = String(a[sortConfig.key] || '');
-    const bValue = String(b[sortConfig.key] || '');
-    if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-    if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
-    return 0;
-  });
-
-  const totalPages = Math.max(1, Math.ceil(sortedForms.length / rowsPerPage));
-  const safePage = Math.min(page, totalPages);
-  const paginatedForms = sortedForms.slice((safePage - 1) * rowsPerPage, safePage * rowsPerPage);
-
-  const handleSearch = (value) => {
-    setSearch(value);
-    setPage(1);
-  };
-
-  const handleFilterStatus = (value) => {
-    setFilterStatus(value);
-    setPage(1);
-  };
-
-  const handleFilterDivisi = (value) => {
-    setFilterDivisi(value);
-    setPage(1);
-  };
-
-  const handleRowsPerPage = (value) => {
-    setRowsPerPage(Number(value));
-    setPage(1);
-  };
-
-  const headerAction = (
-    <div className="approval-filter-bar">
-      <div className="approval-filter-bar__field">
-        <span className="approval-filter-bar__field-icon">
-          <SearchMd size={15} />
-        </span>
-        <input
-          type="text"
-          className="approval-filter-bar__input approval-filter-bar__input--search"
-          placeholder="Cari no. form, dept, nama..."
-          value={search}
-          onChange={(event) => handleSearch(event.target.value)}
-        />
-      </div>
-
-      <div
-        className="approval-filter-bar__field"
-        style={{ cursor: 'pointer' }}
-        onClick={(e) => {
-          const input = e.currentTarget.querySelector('input[type="date"]');
-          if (input && typeof input.showPicker === 'function') {
-            try { input.showPicker(); } catch (_) {}
-          }
-        }}
+  const filterCard = (
+    <div className={`approval-filter-card approved-filter-card${mobileFilterOpen ? ' approval-filter-card--mobile-open' : ''}`}>
+      <button
+        type="button"
+        className="approval-filter-card__toggle"
+        onClick={() => setMobileFilterOpen((prev) => !prev)}
+        aria-expanded={mobileFilterOpen}
+        aria-controls="approved-filter-fields"
       >
-        <span className="approval-filter-bar__field-icon" style={{ left: 5 }}>
-          <span style={{
-            width: 26,
-            height: 26,
-            borderRadius: 4,
-            background: '#e7eef7',
-            color: 'var(--primary-blue)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}>
-            <CalendarMonthRoundedIcon style={{ fontSize: 16 }} />
-          </span>
+        <span className="approval-filter-card__toggle-label">
+          <FilterListRoundedIcon sx={{ fontSize: 20 }} />
+          Filter & Pencarian
         </span>
-        <input
-          type="text"
-          readOnly
-          placeholder="Filter Tanggal"
-          className="approval-filter-bar__input approval-filter-bar__input--date"
-          style={{ cursor: 'pointer', paddingLeft: 38, paddingRight: filterDate ? '28px' : undefined }}
-          value={filterDate ? filterDate.split('-').reverse().join('/') : ''}
-        />
-        <input
-          type="date"
-          value={filterDate}
-          onChange={(event) => { setFilterDate(event.target.value); setPage(1); }}
-          style={{ position: 'absolute', opacity: 0, width: 0, height: 0, bottom: 0, left: '50%', pointerEvents: 'none' }}
-          tabIndex={-1}
-        />
-        {filterDate && (
-          <span
-            className="approval-filter-bar__field-icon approval-filter-bar__field-icon--right"
-            style={{ cursor: 'pointer' }}
-            onClick={(e) => { e.stopPropagation(); setFilterDate(''); setPage(1); }}
+        <ChevronDown size={18} style={{ transition: 'transform 0.22s cubic-bezier(0.4,0,0.2,1)', transform: mobileFilterOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+      </button>
+
+      <div id="approved-filter-fields" className="approval-filter-card__fields">
+        {/* Search */}
+        <div className="approval-filter-card__field approval-filter-card__field--search">
+          <span className="approval-filter-card__label">Pencarian</span>
+          <div className="approval-filter-card__input-wrap">
+            <span className="approval-filter-card__icon"><SearchMd size={18} /></span>
+            <input
+              type="text"
+              className="approval-filter-card__input"
+              placeholder="Cari form atau nama..."
+              value={search}
+              onChange={(event) => handleSearch(event.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* Departemen */}
+        <div className="approval-filter-card__field" style={{ flex: '1 1 220px', minWidth: 0 }}>
+          <span className="approval-filter-card__label">Departemen</span>
+          <TextField
+            select fullWidth value={filterDivisi}
+            onChange={(e) => handleFilterDivisi(e.target.value)}
+            SelectProps={{ displayEmpty: true }}
+            InputProps={{ startAdornment: (
+              <Box sx={{ display:'flex', alignItems:'center', color:'#6b7a90', mr:0.75, ml:0.25 }}>
+                <ApartmentRoundedIcon sx={{ fontSize: 18 }} />
+              </Box>
+            )}}
+            sx={selectSx}
           >
-            <XClose size={13} />
-          </span>
-        )}
-      </div>
+            <MenuItem value=""><em style={{ color:'#94a3b8' }}>Semua Departemen</em></MenuItem>
+            {divisiOptions.map((d) => <MenuItem key={d} value={d}>{d}</MenuItem>)}
+          </TextField>
+        </div>
 
-      <div className="approval-filter-bar__field">
-        <select
-          className="approval-filter-bar__select"
-          value={filterDivisi}
-          onChange={(event) => handleFilterDivisi(event.target.value)}
-        >
-          <option value="">Semua Departemen</option>
-          {divisiOptions.map((divisi) => (
-            <option key={divisi} value={divisi}>{divisi}</option>
-          ))}
-        </select>
-        <span className="approval-filter-bar__field-icon approval-filter-bar__field-icon--right">
-          <ChevronDown size={14} />
-        </span>
-      </div>
+        {/* Jenis Form */}
+        <div className="approval-filter-card__field" style={{ flex: '1 1 220px', minWidth: 0 }}>
+          <span className="approval-filter-card__label">Jenis Form</span>
+          <TextField
+            select fullWidth value={filterJenisForm}
+            onChange={(e) => handleFilterJenisForm(e.target.value)}
+            SelectProps={{ displayEmpty: true }}
+            InputProps={{ startAdornment: (
+              <Box sx={{ display:'flex', alignItems:'center', color:'#6b7a90', mr:0.75, ml:0.25 }}>
+                <AssignmentIndRoundedIcon sx={{ fontSize: 18 }} />
+              </Box>
+            )}}
+            sx={selectSx}
+          >
+            <MenuItem value=""><em style={{ color:'#94a3b8' }}>Semua Jenis</em></MenuItem>
+            <MenuItem value="staff">Staff</MenuItem>
+            <MenuItem value="manager">Manager</MenuItem>
+            <MenuItem value="outsourcing">Outsourcing</MenuItem>
+            <MenuItem value="harian_lepas">Harian Lepas</MenuItem>
+          </TextField>
+        </div>
 
-      <div className="approval-filter-bar__field">
-        <select
-          className="approval-filter-bar__select"
-          value={filterStatus}
-          onChange={(event) => handleFilterStatus(event.target.value)}
-        >
-          <option value="">Semua Status</option>
-          <option value="approved">Disetujui</option>
-          <option value="rejected">Ditolak</option>
-        </select>
-        <span className="approval-filter-bar__field-icon approval-filter-bar__field-icon--right">
-          <ChevronDown size={14} />
-        </span>
+        {/* Status */}
+        <div className="approval-filter-card__field" style={{ flex: '1 1 200px', minWidth: 0 }}>
+          <span className="approval-filter-card__label">Status</span>
+          <TextField
+            select fullWidth value={filterStatus}
+            onChange={(e) => handleFilterStatus(e.target.value)}
+            SelectProps={{ displayEmpty: true }}
+            InputProps={{ startAdornment: (
+              <Box sx={{ display:'flex', alignItems:'center', color:'#6b7a90', mr:0.75, ml:0.25 }}>
+                <LocalOfferRoundedIcon sx={{ fontSize: 18 }} />
+              </Box>
+            )}}
+            sx={selectSx}
+          >
+            <MenuItem value=""><em style={{ color:'#94a3b8' }}>Semua Status</em></MenuItem>
+            <MenuItem value="approved">Disetujui</MenuItem>
+            <MenuItem value="rejected">Ditolak</MenuItem>
+          </TextField>
+        </div>
       </div>
     </div>
   );
@@ -409,187 +344,249 @@ export default function ApprovedList() {
         <Box className="dashboard-content" sx={pageSx}>
           {error && <Alert severity="error" onClose={() => setError('')} sx={{ mb: 1 }}>{error}</Alert>}
 
+          {filterCard}
+
           <CardBigBox
-            className="approved-main-panel"
-            contentClassName="approved-main-panel__body"
             eyebrow="Daftar Form"
             title="Form Diproses"
-            headerAction={headerAction}
+            className={`approved-main-panel${isEmptyState ? ' approval-main-panel--empty' : ''}`}
+            contentClassName={`approved-main-panel__body${isEmptyState ? ' approval-panel-body--empty' : ''}`}
+            footer={total > 0 && !loading ? (
+              <div className="approval-pagination">
+                <div className="approval-pagination__rows">
+                  <span className="approval-pagination__rows-text">Tampilkan</span>
+                  <TextField
+                    select size="small" value={rowsPerPage}
+                    onChange={(e) => handleRowsPerPage(e.target.value)}
+                    sx={{ width: 72 }}
+                  >
+                    {ROWS_OPTIONS.map((r) => <MenuItem key={r} value={r}>{r}</MenuItem>)}
+                  </TextField>
+                  <span className="approval-pagination__rows-text">baris</span>
+                </div>
+                <div className="approval-pagination__nav">
+                  <span className="approval-pagination__info">
+                    {(safePage - 1) * rowsPerPage + 1}–{Math.min(safePage * rowsPerPage, total)} dari {total}
+                  </span>
+                  <button type="button" className="approval-pagination__btn" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage === 1}>
+                    <KeyboardArrowLeftIcon sx={{ fontSize: 16 }} />
+                    <span className="approval-pagination__btn-label">Previous</span>
+                  </button>
+                  <button type="button" className="approval-pagination__btn" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={safePage === totalPages}>
+                    <span className="approval-pagination__btn-label">Next</span>
+                    <KeyboardArrowRightIcon sx={{ fontSize: 16 }} />
+                  </button>
+                </div>
+              </div>
+            ) : null}
           >
             {loading ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
                 <CircularProgress />
               </Box>
             ) : forms.length === 0 ? (
-              <Box className="dashboard-empty-state">
-                <CheckCircleIcon sx={{ fontSize: 52, color: 'success.light', mb: 1.5 }} />
-                <p className="dashboard-empty-state__title">Tidak ada data ditemukan</p>
-                <p className="dashboard-empty-state__detail">Coba ubah filter atau kata pencarian.</p>
-              </Box>
+              <div className="approval-empty-state">
+                <div className="approval-empty">
+                  <div className="approval-empty__body">
+                    <div className="approval-empty__card">
+                      <div className="approval-empty__visual">
+                        <div className="approval-empty__ring">
+                          <div className="approval-empty__ring-inner">
+                            {isFiltered
+                              ? <SearchOffRoundedIcon className="approval-empty__check" />
+                              : <FactCheckRoundedIcon className="approval-empty__check" />}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="approval-empty__content">
+                        <p className="approval-empty__title">
+                          {isFiltered ? 'Data tidak ditemukan' : 'Belum ada form diproses'}
+                        </p>
+                        <p className="approval-empty__desc">
+                          {isFiltered
+                            ? 'Coba ubah filter atau kata kunci pencarian yang digunakan.'
+                            : 'Belum ada form lembur yang masuk ke daftar disetujui atau ditolak.'}
+                        </p>
+                        {isFiltered && (
+                          <button
+                            type="button"
+                            className="approval-empty__reset"
+                            onClick={() => { setSearch(''); setFilterStatus(''); setFilterDivisi(''); setFilterJenisForm(''); setPage(1); }}
+                          >
+                            <XClose size={14} />
+                            Reset Filter
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             ) : (
               <>
+                {/* ── Desktop: collapsible datatable ── */}
                 <TableContainer
                   component={Paper}
                   elevation={0}
                   sx={{
-                    flex: 1,
-                    minHeight: 0,
-                    overflowX: 'auto',
-                    overflowY: 'auto',
-                    overscrollBehavior: 'contain',
-                    scrollbarGutter: 'stable',
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    borderRadius: 2,
-                    width: '100%',
+                    flex: 1, minHeight: 0, overflowY: 'auto',
+                    overscrollBehavior: 'contain', scrollbarGutter: 'stable',
+                    border: '1px solid', borderColor: 'divider', borderRadius: 2,
+                    background: 'linear-gradient(180deg,rgba(248,250,252,0.9) 0%,rgba(255,255,255,0.96) 100%)',
                     '@media (max-width: 768px)': { display: 'none' },
                   }}
                 >
-                  <Table
-                    size="small"
-                    stickyHeader
-                    sx={{
-                      minWidth: tableMinWidth,
-                      tableLayout: 'fixed',
-                      '& .MuiTableCell-root': cellSx,
-                    }}
-                  >
+                  <Table size="small" stickyHeader sx={{
+                    '& .MuiTableCell-root': { px: 1.25, py: 0.75, fontSize: '0.82rem', transition: 'background .15s' },
+                    '& .MuiTableHead-root .MuiTableCell-root': {
+                      fontSize: '0.74rem', fontWeight: 800, color: '#607089',
+                      backgroundColor: '#f3f6fa',
+                      borderBottom: '1px solid rgba(26,42,87,0.1)',
+                      position: 'sticky',
+                      top: 0,
+                      zIndex: 3,
+                    },
+                    '& .MuiTableBody-root .form-summary-row:hover td': { background: 'rgba(237,242,250,0.85)' },
+                    '& .MuiTableBody-root .form-summary-row td': { transition: 'background .15s' },
+                  }}>
                     <TableHead>
                       <TableRow>
-                        <TableCell sx={{ width: '18%' }}>
-                          <TableSortLabel active={sortConfig.key === 'nomerForm'} direction={sortConfig.key === 'nomerForm' ? sortConfig.direction : 'asc'} onClick={() => handleSort('nomerForm')}>No. Form</TableSortLabel>
-                        </TableCell>
-                        <TableCell sx={{ width: '18%' }}>
-                          <TableSortLabel active={sortConfig.key === 'department'} direction={sortConfig.key === 'department' ? sortConfig.direction : 'asc'} onClick={() => handleSort('department')}>Department</TableSortLabel>
-                        </TableCell>
-                        <TableCell sx={{ width: '15%' }}>
-                          <TableSortLabel active={sortConfig.key === 'diperintahOleh'} direction={sortConfig.key === 'diperintahOleh' ? sortConfig.direction : 'asc'} onClick={() => handleSort('diperintahOleh')}>Diperintah Oleh</TableSortLabel>
-                        </TableCell>
-                        <TableCell sx={{ width: '13%' }}>
-                          <TableSortLabel active={sortConfig.key === 'tanggalPengajuan'} direction={sortConfig.key === 'tanggalPengajuan' ? sortConfig.direction : 'asc'} onClick={() => handleSort('tanggalPengajuan')}>Tgl Pengajuan</TableSortLabel>
-                        </TableCell>
-                        <TableCell sx={{ width: '12%' }}>
-                          <TableSortLabel active={sortConfig.key === 'lemburPada'} direction={sortConfig.key === 'lemburPada' ? sortConfig.direction : 'asc'} onClick={() => handleSort('lemburPada')}>Lembur Pada</TableSortLabel>
-                        </TableCell>
-                        <TableCell sx={{ width: '12%' }}>
-                          <TableSortLabel active={sortConfig.key === 'status'} direction={sortConfig.key === 'status' ? sortConfig.direction : 'asc'} onClick={() => handleSort('status')}>Status</TableSortLabel>
-                        </TableCell>
-                        <TableCell sx={{ width: actionColumnWidth }} align="center">Aksi</TableCell>
+                        <TableCell sx={{ width: 36 }} />
+                        <TableCell sx={{ width: 160 }}>No. Form</TableCell>
+                        <TableCell sx={{ width: 110 }}>Jenis</TableCell>
+                        <TableCell sx={{ width: 110, whiteSpace: 'nowrap' }}>Tgl. Pengajuan</TableCell>
+                        <TableCell>Departemen</TableCell>
+                        <TableCell>Diperintah</TableCell>
+                        <TableCell sx={{ width: 80, whiteSpace: 'nowrap' }}>Jml. Org</TableCell>
+                        <TableCell sx={{ width: 115 }}>Status</TableCell>
+                        <TableCell sx={{ width: 140 }}>Diproses Oleh</TableCell>
+                        <TableCell sx={{ width: 150 }} align="center">Aksi</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {paginatedForms.map((form) => {
+                      {forms.map((form, formIdx) => {
+                        const entries = form.entries ?? [];
                         const isOpen = expandedId === form.id;
-
                         return (
                           <React.Fragment key={form.id}>
                             <TableRow
+                              className="form-summary-row"
                               hover
-                              sx={{ cursor: 'pointer', userSelect: 'none' }}
                               onClick={() => setExpandedId(isOpen ? null : form.id)}
+                              sx={{
+                                cursor: 'pointer',
+                                borderBottom: isOpen ? 'none' : undefined,
+                                animation: 'cardSlideUp 0.38s cubic-bezier(0.22, 1, 0.36, 1) both',
+                                animationDelay: `${Math.min(formIdx * 0.03, 0.15)}s`,
+                              }}
                             >
+                              <TableCell sx={{ color: '#94a3b8', textAlign: 'center', pr: 0 }}>
+                                {isOpen
+                                  ? <ExpandLessIcon sx={{ fontSize: 18, display: 'block', mx: 'auto' }} />
+                                  : <ExpandMoreIcon sx={{ fontSize: 18, display: 'block', mx: 'auto' }} />}
+                              </TableCell>
                               <TableCell>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
-                                  <IconButton size="small" sx={{ p: 0.25, flexShrink: 0 }}>
-                                    {isOpen ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
-                                  </IconButton>
-                                  <Box sx={{ minWidth: 0 }}>
-                                    <Typography variant="body2" fontWeight={800} color="primary.main">
-                                      {form.nomerForm}
-                                    </Typography>
-                                    <Chip label={form.kodeDivisi} color="primary" size="small" sx={{ mt: 0.25 }} />
-                                  </Box>
-                                </Box>
+                                <Typography variant="body2" fontWeight={800} color="primary.main">{form.nomerForm}</Typography>
+                              </TableCell>
+                              <TableCell><FormTypeBadge jenisForm={form.jenisForm} /></TableCell>
+                              <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                                <Typography variant="body2">{form.tanggalPengajuan || '-'}</Typography>
                               </TableCell>
                               <TableCell>
                                 <Typography variant="body2" fontWeight={700}>{form.department}</Typography>
                               </TableCell>
                               <TableCell>
-                                <Typography variant="body2">{form.diperintahOleh}</Typography>
+                                <Typography variant="body2">{form.diperintahOleh || '-'}</Typography>
                               </TableCell>
                               <TableCell>
-                                <Typography variant="body2">{form.tanggalPengajuan}</Typography>
+                                <Typography variant="body2" color="text.secondary" fontSize="0.78rem">{entries.length} org</Typography>
                               </TableCell>
+                              <TableCell><ApprovedStatusChip status={form.status} /></TableCell>
                               <TableCell>
-                                <Chip
-                                  label={form.lemburPada}
-                                  size="small"
-                                  color={form.lemburPada === 'Hari Libur' ? 'error' : 'default'}
-                                  variant="outlined"
-                                />
+                                <Typography variant="body2" noWrap title={getProcessedBy(form)} sx={{ maxWidth: 130 }}>
+                                  {getProcessedBy(form)}
+                                </Typography>
                               </TableCell>
-                              <TableCell>
-                                <StatusChip status={form.status} />
-                              </TableCell>
-                              <TableCell align="center" onClick={(event) => event.stopPropagation()} sx={{ whiteSpace: 'nowrap' }}>
-                                <Box className="approved-list-actions">
-                                  <CreateButton
-                                    variant="accordion"
-                                    className="approved-list-action-button"
-                                    onClick={() => setDetailForm(form)}
-                                  >
+                              <TableCell align="center" onClick={(e) => e.stopPropagation()}>
+                                <div style={{ display: 'flex', flexDirection: 'row', gap: 4, alignItems: 'center', justifyContent: 'center' }}>
+                                  <CreateButton variant="accordion" onClick={() => setDetailForm(form)}>
                                     <FactCheckRoundedIcon sx={{ fontSize: 15 }} />
                                     Detail
                                   </CreateButton>
-                                  {canRevertForm(user, form) && form.status !== 'pending' && (
-                                    <CreateButton
-                                      variant="accordion"
-                                      className="approved-list-action-button approved-list-action-button--revert"
-                                      onClick={() => setRevertId(form.id)}
-                                    >
+                                  {canRevertForm(user, form) && (
+                                    <CreateButton variant="accordion" className="approval-card__edit-btn" onClick={() => setRevertId(form.id)}>
                                       <RestoreRoundedIcon sx={{ fontSize: 15 }} />
-                                      Kembalikan
+                                      Revert
                                     </CreateButton>
                                   )}
-                                </Box>
+                                </div>
                               </TableCell>
                             </TableRow>
 
-                            <TableRow sx={{ bgcolor: 'rgba(248,250,252,0.9)' }}>
-                              <TableCell colSpan={7} sx={{ p: 0, border: 0 }}>
+                            <TableRow>
+                              <TableCell colSpan={10} sx={{ py: 0, border: isOpen ? undefined : 'none !important' }}>
                                 <Collapse in={isOpen} timeout="auto" unmountOnExit>
-                                  <Box sx={{ px: 2, py: 1.5, overflowX: 'auto' }}>
-                                    <Table
-                                      size="small"
-                                      sx={{
-                                        minWidth: 860,
-                                        tableLayout: 'auto',
-                                        '& .MuiTableCell-root': {
-                                          px: 1.25,
-                                          py: 0.75,
-                                          fontSize: '0.8rem',
-                                          verticalAlign: 'top',
-                                        },
-                                      }}
-                                    >
+                                  <Box sx={{
+                                    mx: 2, my: 1.5,
+                                    borderRadius: 1.5,
+                                    border: '1px solid rgba(26,42,87,0.08)',
+                                    background: 'rgba(248,250,252,0.7)',
+                                    overflow: 'hidden',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                  }}>
+                                    <Typography variant="caption" fontWeight={800} color="primary.main"
+                                      sx={{ display: 'block', px: 1.5, pt: 1.25, pb: 0.75, borderBottom: '1px solid rgba(26,42,87,0.07)', letterSpacing: '0.03em' }}>
+                                      DETAIL ENTRI LEMBUR
+                                    </Typography>
+                                    <TableContainer sx={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 260 }}>
+                                    <Table size="small" sx={{
+                                      '& .MuiTableCell-root': { px: 1.25, py: 0.6, fontSize: '0.8rem' },
+                                      '& .MuiTableHead-root .MuiTableCell-root': {
+                                        fontSize: '0.72rem', fontWeight: 700, color: '#7a8fa6',
+                                        background: 'rgba(241,245,249,0.5)',
+                                        borderBottom: '1px solid rgba(26,42,87,0.08)',
+                                        position: 'sticky', top: 0, zIndex: 1,
+                                      },
+                                    }}>
                                       <TableHead>
                                         <TableRow>
-                                          <TableCell sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>Internal ID</TableCell>
-                                          <TableCell sx={{ fontWeight: 700, whiteSpace: 'nowrap', minWidth: 140 }}>Nama</TableCell>
-                                          <TableCell sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>ID Karyawan</TableCell>
-                                          <TableCell sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>Tgl Lembur</TableCell>
-                                          <TableCell sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>Mulai</TableCell>
-                                          <TableCell sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>Selesai</TableCell>
-                                          <TableCell sx={{ fontWeight: 700, minWidth: 200, whiteSpace: 'normal' }}>Tugas</TableCell>
-                                          <TableCell sx={{ fontWeight: 700, minWidth: 180, whiteSpace: 'normal' }}>Hasil</TableCell>
-                                          <TableCell sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>Kompensasi</TableCell>
+                                          <TableCell sx={{ width: 34 }}>No</TableCell>
+                                          <TableCell sx={{ width: 140 }}>Nama</TableCell>
+                                          <TableCell sx={{ width: 110 }}>ID Karyawan</TableCell>
+                                          <TableCell sx={{ width: 105, whiteSpace: 'nowrap' }}>Tgl. Lembur</TableCell>
+                                          <TableCell sx={{ width: 68 }}>Mulai</TableCell>
+                                          <TableCell sx={{ width: 68 }}>Selesai</TableCell>
+                                          <TableCell>Tugas</TableCell>
+                                          <TableCell>Hasil</TableCell>
+                                          <TableCell sx={{ width: 100 }}>Kompensasi</TableCell>
                                         </TableRow>
                                       </TableHead>
                                       <TableBody>
-                                        {(form.entries ?? []).map((entry, idx) => (
-                                          <TableRow key={idx} hover>
-                                            <TableCell sx={{ whiteSpace: 'nowrap' }}>{entry.internalId || '-'}</TableCell>
-                                            <TableCell>
-                                              <Typography variant="body2" fontWeight={700}>{entry.nama}</Typography>
+                                        {entries.length === 0 ? (
+                                          <TableRow>
+                                            <TableCell colSpan={9} sx={{ color: '#9ca3af', fontStyle: 'italic', textAlign: 'center', py: 2 }}>
+                                              Tidak ada entri
                                             </TableCell>
-                                            <TableCell sx={{ whiteSpace: 'nowrap' }}>{entry.idKaryawan || '-'}</TableCell>
+                                          </TableRow>
+                                        ) : entries.map((entry, idx) => (
+                                          <TableRow key={idx} hover>
+                                            <TableCell sx={{ color: '#9ca3af', fontWeight: 600, textAlign: 'center' }}>{idx + 1}</TableCell>
+                                            <TableCell>
+                                              <Typography variant="body2" fontWeight={700} noWrap title={entry.nama}>{entry.nama}</Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                              <span className="users-table__status users-table__status--inline users-table__status--app" style={{ fontSize: '0.75rem' }}>
+                                                {entry.idKaryawan || '-'}
+                                              </span>
+                                            </TableCell>
                                             <TableCell sx={{ whiteSpace: 'nowrap' }}>{entry.tanggalLembur}</TableCell>
                                             <TableCell sx={{ whiteSpace: 'nowrap' }}>{entry.jamMulai}</TableCell>
                                             <TableCell sx={{ whiteSpace: 'nowrap' }}>{entry.jamSelesai}</TableCell>
-                                            <TableCell sx={{ whiteSpace: 'normal', wordBreak: 'break-word', minWidth: 200 }}>{entry.tugas || '-'}</TableCell>
-                                            <TableCell sx={{ whiteSpace: 'normal', wordBreak: 'break-word', minWidth: 180 }}>{entry.hasil || '-'}</TableCell>
-                                            <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                                              <Typography variant="body2" fontWeight={800} color="secondary.main">
+                                            <TableCell sx={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>{entry.tugas || '-'}</TableCell>
+                                            <TableCell sx={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>{entry.hasil || '-'}</TableCell>
+                                            <TableCell>
+                                              <Typography variant="body2" fontWeight={800} color="secondary.main" noWrap>
                                                 {formatKompensasi(entry.kompensasi)}
                                               </Typography>
                                             </TableCell>
@@ -597,6 +594,7 @@ export default function ApprovedList() {
                                         ))}
                                       </TableBody>
                                     </Table>
+                                    </TableContainer>
                                   </Box>
                                 </Collapse>
                               </TableCell>
@@ -608,191 +606,113 @@ export default function ApprovedList() {
                   </Table>
                 </TableContainer>
 
-                {/* Mobile card view */}
-                <Box
-                  sx={{
-                    display: 'none',
-                    '@media (max-width: 768px)': {
-                      display: 'flex',
-                      flexDirection: 'column',
-                      flex: 1,
-                      minHeight: 0,
-                      overflowY: 'auto',
-                      overscrollBehavior: 'contain',
-                      gap: '12px',
-                      pb: '8px',
-                    },
-                  }}
-                >
-                  <div className="dashboard-stack">
-                    {paginatedForms.map((form) => {
-                      const isOpen = expandedId === form.id;
-                      const entries = form.entries ?? [];
-                      const entriesCount = entries.length;
-
-                      return (
-                        <div key={form.id} className="dashboard-stack__item approval-card">
-                          <div className="approval-card__header">
-                            <div className="approval-card__info">
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
-                                <Typography variant="subtitle1" fontWeight={800} color="primary.main">
-                                  {form.nomerForm}
-                                </Typography>
-                                <StatusChip status={form.status} />
-                                {form.kodeDivisi && <Chip label={form.kodeDivisi} color="primary" size="small" />}
-                                {form.lemburPada && (
-                                  <Chip
-                                    label={form.lemburPada}
-                                    size="small"
-                                    color={form.lemburPada === 'Hari Libur' ? 'error' : 'default'}
-                                    variant="outlined"
-                                  />
+                {/* ── Mobile: cards ── */}
+                <Box sx={{
+                  display: 'none',
+                  '@media (max-width: 768px)': {
+                    display: 'flex', flexDirection: 'column',
+                    flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain',
+                  },
+                }}>
+                  <div className="approval-scroll-surface">
+                    <div className="dashboard-stack approval-content-stack">
+                      {forms.map((form) => {
+                        const isOpen = expandedId === form.id;
+                        const entries = form.entries ?? [];
+                        return (
+                          <div
+                            key={form.id}
+                            className="dashboard-stack__item approval-card"
+                            onClick={() => setExpandedId(isOpen ? null : form.id)}
+                            style={{ cursor: 'pointer' }}
+                          >
+                            <div className="approval-card__header">
+                              <div className="approval-card__info">
+                                <div className="approval-card__topline">
+                                  <Typography variant="subtitle2" fontWeight={800} color="primary.main" sx={{ fontSize: '0.92rem' }}>
+                                    {form.nomerForm}
+                                  </Typography>
+                                  <ApprovedStatusChip status={form.status} />
+                                  <FormTypeBadge jenisForm={form.jenisForm} />
+                                </div>
+                                <div className="approval-card__meta">
+                                  <span className="approval-card__meta-item">
+                                    <span className="approval-card__meta-label">Departemen</span>
+                                    <strong>{form.department}</strong>
+                                  </span>
+                                  <span className="approval-card__meta-separator" aria-hidden="true" />
+                                  <span className="approval-card__meta-item">
+                                    <span className="approval-card__meta-label">Diminta oleh</span>
+                                    <strong>{form.diperintahOleh}</strong>
+                                  </span>
+                                  <span className="approval-card__meta-separator" aria-hidden="true" />
+                                  <span className="approval-card__meta-item">
+                                    <span className="approval-card__meta-label">Diproses oleh</span>
+                                    <strong>{getProcessedBy(form)}</strong>
+                                  </span>
+                                  <span className="approval-card__meta-separator" aria-hidden="true" />
+                                  <span className="approval-card__meta-item">
+                                    <span className="approval-card__meta-label">Tanggal</span>
+                                    <strong>{form.tanggalPengajuan}</strong>
+                                  </span>
+                                </div>
+                                <div className="approval-card__summary approval-card__summary--simple">
+                                  <div className="approval-card__summary-item approval-card__summary-item--muted">
+                                    <Typography variant="caption" color="text.secondary">{entries.length} karyawan</Typography>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="approval-card__actions" onClick={(e) => e.stopPropagation()}>
+                                <CreateButton variant="accordion" onClick={() => setDetailForm(form)}>
+                                  <FactCheckRoundedIcon sx={{ fontSize: 15 }} />
+                                  Detail
+                                </CreateButton>
+                                {canRevertForm(user, form) && (
+                                  <CreateButton variant="accordion" className="approval-card__edit-btn" onClick={() => setRevertId(form.id)}>
+                                    <RestoreRoundedIcon sx={{ fontSize: 15 }} />
+                                    Revert
+                                  </CreateButton>
                                 )}
                               </div>
-                              <Typography variant="body2" color="text.secondary">
-                                <strong>{form.department}</strong>
-                                {' — '}Diperintah oleh: <strong>{form.diperintahOleh}</strong>
-                                {' — '}Tgl: {form.tanggalPengajuan}
-                              </Typography>
-                              <div style={{ marginTop: 6 }}>
-                                <Typography variant="caption" color="text.secondary">
-                                  {entriesCount} karyawan
-                                </Typography>
+                              <div className={`approval-entry-toggle${isOpen ? ' approval-entry-toggle--open' : ''}`} aria-hidden="true">
+                                {isOpen ? <ExpandLessIcon sx={{ fontSize: 20, display: 'block' }} /> : <ExpandMoreIcon sx={{ fontSize: 20, display: 'block' }} />}
                               </div>
                             </div>
 
-                            <div className="approval-card__actions">
-                              <CreateButton
-                                variant="accordion"
-                                onClick={() => setDetailForm(form)}
-                              >
-                                <FactCheckRoundedIcon sx={{ fontSize: 15 }} />
-                                Detail
-                              </CreateButton>
-                              {canRevertForm(user, form) && form.status !== 'pending' && (
-                                <CreateButton
-                                  variant="accordion"
-                                  className="approval-card__edit-btn"
-                                  onClick={() => setRevertId(form.id)}
-                                >
-                                  <RestoreRoundedIcon sx={{ fontSize: 15 }} />
-                                  Kembalikan
-                                </CreateButton>
-                              )}
-                            </div>
-
-                            <button
-                              type="button"
-                              className={`approval-entry-toggle${isOpen ? ' approval-entry-toggle--open' : ''}`}
-                              onClick={() => setExpandedId(isOpen ? null : form.id)}
-                              aria-label={isOpen ? 'Sembunyikan entri lembur' : 'Tampilkan entri lembur'}
-                              aria-expanded={isOpen}
-                              disabled={entriesCount === 0}
-                            >
-                              {isOpen
-                                ? <ExpandLessIcon sx={{ fontSize: 20, display: 'block' }} />
-                                : <ExpandMoreIcon sx={{ fontSize: 20, display: 'block' }} />}
-                            </button>
+                            <Collapse in={isOpen} onClick={(e) => e.stopPropagation()}>
+                              <hr style={{ margin: '14px 0', border: 'none', borderTop: '1px solid rgba(26,42,87,0.08)' }} />
+                              <p style={{ margin: '0 0 10px', color: 'var(--primary-blue)', fontSize: '0.88rem', fontWeight: 700 }}>Detail Entri Lembur</p>
+                              <div className="users-table-wrapper approval-entry-table-wrapper">
+                                <table className="users-table approval-mobile-table">
+                                  <thead><tr>
+                                    <th>ID Internal</th><th>Nama</th><th>ID Karyawan</th>
+                                    <th>Tgl. Lembur</th><th>Hari Lembur</th><th>Mulai</th>
+                                    <th>Selesai</th><th>Tugas</th><th>Hasil</th><th>Kompensasi</th>
+                                  </tr></thead>
+                                  <tbody>
+                                    {entries.map((entry, idx) => (
+                                      <tr key={idx}>
+                                        <td data-label="ID Internal"><span className="users-table__status users-table__status--inline users-table__status--pending">{entry.internalId || '-'}</span></td>
+                                        <td data-label="Nama"><strong className="users-table__name">{entry.nama}</strong></td>
+                                        <td data-label="ID Karyawan"><span className="users-table__status users-table__status--inline users-table__status--app">{entry.idKaryawan || '-'}</span></td>
+                                        <td data-label="Tgl. Lembur">{entry.tanggalLembur}</td>
+                                        <td data-label="Hari Lembur"><strong style={{ color: form.lemburPada === 'Hari Libur' ? '#d32f2f' : undefined }}>{formatLemburPada(form.lemburPada)}</strong></td>
+                                        <td data-label="Mulai">{entry.jamMulai}</td>
+                                        <td data-label="Selesai">{entry.jamSelesai}</td>
+                                        <td data-label="Tugas" style={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>{entry.tugas || '-'}</td>
+                                        <td data-label="Hasil" style={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>{entry.hasil || '-'}</td>
+                                        <td data-label="Kompensasi"><strong style={{ color: '#6d3fa0' }}>{formatKompensasi(entry.kompensasi)}</strong></td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </Collapse>
                           </div>
-
-                          <Collapse in={isOpen && entriesCount > 0}>
-                            <hr style={{ margin: '14px 0', border: 'none', borderTop: '1px solid rgba(26,42,87,0.08)' }} />
-                            <p style={{ margin: '0 0 10px', color: 'var(--primary-blue)', fontSize: '0.88rem', fontWeight: 700 }}>
-                              Detail Entri Lembur
-                            </p>
-                            <div className="users-table-wrapper approval-entry-table-wrapper">
-                              <table className="users-table approval-mobile-table">
-                                <thead>
-                                  <tr>
-                                    <th>Internal ID</th>
-                                    <th>Nama</th>
-                                    <th>ID Karyawan</th>
-                                    <th>Tgl Lembur</th>
-                                    <th>Mulai</th>
-                                    <th>Selesai</th>
-                                    <th>Tugas</th>
-                                    <th>Hasil</th>
-                                    <th>Kompensasi</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {entries.map((entry, idx) => (
-                                    <tr key={idx}>
-                                      <td data-label="Internal ID">
-                                        <span className="users-table__status users-table__status--inline users-table__status--pending">
-                                          {entry.internalId || '-'}
-                                        </span>
-                                      </td>
-                                      <td data-label="Nama">
-                                        <strong className="users-table__name">{entry.nama}</strong>
-                                      </td>
-                                      <td data-label="ID Karyawan">
-                                        <span className="users-table__status users-table__status--inline users-table__status--app">
-                                          {entry.idKaryawan || '-'}
-                                        </span>
-                                      </td>
-                                      <td data-label="Tgl Lembur">{entry.tanggalLembur}</td>
-                                      <td data-label="Mulai">{entry.jamMulai}</td>
-                                      <td data-label="Selesai">{entry.jamSelesai}</td>
-                                      <td data-label="Tugas" style={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
-                                        {entry.tugas || '-'}
-                                      </td>
-                                      <td data-label="Hasil" style={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
-                                        {entry.hasil || '-'}
-                                      </td>
-                                      <td data-label="Kompensasi">
-                                        <strong style={{ color: '#6d3fa0' }}>{formatKompensasi(entry.kompensasi)}</strong>
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          </Collapse>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
-                </Box>
-
-                <Box
-                  className="approved-list-pagination"
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    flexWrap: 'wrap',
-                    gap: 1,
-                    pt: 1.5,
-                  }}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography variant="body2" color="text.secondary">Tampilkan</Typography>
-                    <TextField
-                      select
-                      size="small"
-                      value={rowsPerPage}
-                      onChange={(event) => handleRowsPerPage(event.target.value)}
-                      sx={{ width: 80 }}
-                    >
-                      {ROWS_OPTIONS.map((rows) => (
-                        <MenuItem key={rows} value={rows}>{rows}</MenuItem>
-                      ))}
-                    </TextField>
-                    <Typography variant="body2" color="text.secondary">baris</Typography>
-                  </Box>
-
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      {(safePage - 1) * rowsPerPage + 1}-{Math.min(safePage * rowsPerPage, forms.length)} dari {forms.length}
-                    </Typography>
-                    <IconButton size="small" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={safePage === 1}>
-                      <KeyboardArrowLeftIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => setPage((current) => Math.min(totalPages, current + 1))} disabled={safePage === totalPages}>
-                      <KeyboardArrowRightIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
                 </Box>
               </>
             )}
@@ -800,9 +720,9 @@ export default function ApprovedList() {
         </Box>
       </Container>
 
-      {/* Detail popup — rendered via portal so sidebar/header don't overlap it */}
+      {/* Detail popup via portal so it is not covered by the sidebar/header */}
       {detailForm && typeof document !== 'undefined' && createPortal(
-        <div className="dashboard-popup-overlay" role="presentation" onClick={() => { setDetailForm(null); setLoadedDetailForm(null); }}>
+        <div className="dashboard-popup-overlay" role="presentation" onClick={() => setDetailForm(null)}>
           <div
             className="dashboard-popup dashboard-popup--frp-detail"
             role="dialog"
@@ -814,19 +734,22 @@ export default function ApprovedList() {
                 <p className="dashboard-popup__eyebrow">Detail Form Lembur</p>
                 <h2 className="dashboard-popup__title">{detailForm.nomerForm}</h2>
               </div>
-              <button
-                type="button"
-                className="dashboard-popup__close"
-                aria-label="Tutup"
-                onClick={() => { setDetailForm(null); setLoadedDetailForm(null); }}
-              >
-                <XClose size={18} />
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                <ApprovedStatusChip status={detailForm.status} />
+                <button
+                  type="button"
+                  className="dashboard-popup__close"
+                  aria-label="Close"
+                  onClick={() => setDetailForm(null)}
+                >
+                  <XClose size={18} />
+                </button>
+              </div>
             </div>
 
             <div className="dashboard-popup__body--frp-detail">
-              <div style={{ height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <DetailLemburContent formId={detailForm.id} onClose={null} inPopup={true} onFormLoaded={setLoadedDetailForm} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <DetailLemburContent formId={detailForm.id} onClose={null} inPopup={true} />
               </div>
             </div>
 
@@ -837,7 +760,7 @@ export default function ApprovedList() {
                 onClick={() => setPrintForm(detailForm)}
               >
                 <Printer size={15} />
-                Cetak
+                Print
               </button>
             </div>
           </div>
@@ -845,31 +768,28 @@ export default function ApprovedList() {
         document.body
       )}
 
-      {/* Confirm revert dialog */}
+      {/* Return confirmation dialog */}
       {!!revertId && typeof document !== 'undefined' && createPortal(
         <div className="dashboard-popup-overlay" role="presentation" onClick={() => !reverting && setRevertId(null)}>
           <div className="dashboard-popup" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div className="dashboard-popup__header">
               <div>
                 <p className="dashboard-popup__eyebrow">Konfirmasi</p>
-                <h2 className="dashboard-popup__title">Kembalikan ke Approval?</h2>
+                <h2 className="dashboard-popup__title">Revert ke Antrean?</h2>
               </div>
-              <button type="button" className="dashboard-popup__close" aria-label="Tutup" onClick={() => !reverting && setRevertId(null)}>
+              <button type="button" className="dashboard-popup__close" aria-label="Close" onClick={() => !reverting && setRevertId(null)}>
                 <XClose size={18} />
               </button>
             </div>
             <div className="dashboard-popup__body">
               <p className="dashboard-popup__text">
-                Form ini akan dikembalikan ke status <strong>Menunggu Approval</strong>. Approval sebelumnya akan direset dan form perlu disetujui ulang.
+                Form ini akan dikembalikan ke status <strong>Menunggu Persetujuan</strong>. Persetujuan sebelumnya akan direset dan form harus disetujui kembali.
               </p>
             </div>
             <div className="dashboard-popup__actions">
-              <button type="button" className="dashboard-popup__button dashboard-popup__button--secondary" onClick={() => setRevertId(null)} disabled={reverting}>
-                Batal
-              </button>
               <button type="button" className="dashboard-popup__button dashboard-popup__button--primary" onClick={handleRevert} disabled={reverting}>
                 {reverting && <CircularProgress size={14} color="inherit" style={{ marginRight: 8 }} />}
-                {reverting ? 'Memproses...' : 'Ya, Kembalikan'}
+                {reverting ? 'Memproses...' : 'Ya, Revert'}
               </button>
             </div>
           </div>
@@ -877,7 +797,7 @@ export default function ApprovedList() {
         document.body
       )}
 
-      {/* Print Preview Modal */}
+      {/* Print preview modal */}
       {printForm && <PrintPreviewModal form={printForm} onClose={() => setPrintForm(null)} />}
     </Box>
   );

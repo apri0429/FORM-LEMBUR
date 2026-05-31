@@ -33,7 +33,7 @@ export default function LoginPage() {
         username: username.trim(),
         password,
       });
-      login(res.data.data);
+      login(res.data.data, res.data.token);
       navigate('/');
     } catch (err) {
       setError(err.response?.data?.message || 'Login gagal. Coba lagi.');

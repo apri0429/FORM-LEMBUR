@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
 import {
   Alert,
   Box,
@@ -15,18 +14,18 @@ import {
   TableRow,
   Typography,
 } from '@mui/material';
-import FactCheckRoundedIcon from '@mui/icons-material/FactCheckRounded';
-import RestoreRoundedIcon from '@mui/icons-material/RestoreRounded';
+import BadgeRoundedIcon from '@mui/icons-material/BadgeRounded';
+import ManageAccountsRoundedIcon from '@mui/icons-material/ManageAccountsRounded';
+import WorkRoundedIcon from '@mui/icons-material/WorkRounded';
+import EventNoteRoundedIcon from '@mui/icons-material/EventNoteRounded';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import CreateButton from '../components/button/CreateButton';
 import CardBigBox from '../components/cardbox/CardBigBox';
 import {
-  Check, Edit03, FileText01, RefreshCw05, XClose,
+  Check, FileText01, RefreshCw05, XClose,
 } from '../components/template/TemplateIcons.jsx';
 import { useAuth } from '../context/AuthContext';
 import StatusChip from '../components/StatusChip';
-import { DetailLemburContent } from './DetailLembur';
 
 const API = '/api/lembur';
 const BOD_KEYWORDS = ['director', 'commissioner', 'president director'];
@@ -52,19 +51,44 @@ function canRevertForm(user, form) {
   return form.department === user.department;
 }
 
-const cellSx = { px: 1.25, py: 0.75, whiteSpace: 'normal', wordBreak: 'break-word' };
+const FORM_TYPE_CHIP_MAP = {
+  staff:        { label: 'Staff',        color: '#1a2a57', bg: 'rgba(26,42,87,0.08)',    icon: BadgeRoundedIcon },
+  manager:      { label: 'Manager',      color: '#0277bd', bg: 'rgba(2,119,189,0.1)',    icon: ManageAccountsRoundedIcon },
+  outsourcing:  { label: 'Outsourcing',  color: '#e65100', bg: 'rgba(230,81,0,0.09)',   icon: WorkRoundedIcon },
+  harian_lepas: { label: 'Harian Lepas', color: '#6a1b9a', bg: 'rgba(106,27,154,0.09)', icon: EventNoteRoundedIcon },
+};
+
+function FormTypeBadge({ jenisForm }) {
+  const cfg = FORM_TYPE_CHIP_MAP[jenisForm];
+  if (!cfg) return null;
+  const Icon = cfg.icon;
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      height: 24, padding: '0 8px', borderRadius: 12,
+      fontSize: '0.8125rem', fontWeight: 700,
+      color: cfg.color, background: cfg.bg, whiteSpace: 'nowrap',
+    }}>
+      <Icon style={{ fontSize: 14, flexShrink: 0 }} />
+      {cfg.label}
+    </span>
+  );
+}
+
+const cellSx = { px: 1.25, py: 0.75, fontSize: '0.82rem' };
+
+const stickyLeftSx = { ...cellSx };
 
 const pageSx = {
   width: '100%',
   maxWidth: '100%',
   display: 'flex',
   flexDirection: 'column',
-  gap: '18px',
+  gap: '14px',
   paddingBottom: '28px',
+  '& > *': { minWidth: 0 },
   '@media (max-width: 768px)': {
     gap: '12px',
-    paddingLeft: '14px',
-    paddingRight: '14px',
     paddingBottom: '24px',
   },
 };
@@ -137,7 +161,7 @@ function DivisionRanking({ forms }) {
   const max = sorted[0]?.[1] || 1;
   return (
     <div className="dashboard-card" style={{ flex: 1, minWidth: 0 }}>
-      <p className="dashboard-card__label" style={{ marginBottom: 14 }}>Top Divisi Pengaju Lembur</p>
+      <p className="dashboard-card__label" style={{ marginBottom: 14 }}>Departemen Lembur Tertinggi</p>
       {sorted.length === 0 ? (
         <p style={{ color: 'rgba(26,42,87,0.35)', fontSize: '0.85rem', textAlign: 'center', padding: '24px 0', margin: 0 }}>
           Belum ada data
@@ -167,22 +191,37 @@ function DivisionRanking({ forms }) {
 
 function StatCard({ label, value, detail, iconColor, icon, accentColor }) {
   return (
-    <div className="dashboard-card" style={{ gap: 0 }}>
-      <div className="dashboard-card__meta">
-        <p className="dashboard-card__label">{label}</p>
+    <div className="dashboard-card" style={{ gap: 0, position: 'relative', overflow: 'hidden' }}>
+      {/* Garis warna di atas label */}
+      <div style={{
+        height: 3, borderRadius: 2,
+        background: accentColor,
+        marginBottom: 14,
+        flexShrink: 0,
+      }} />
+
+      {/* Label */}
+      <p className="dashboard-card__label" style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', margin: 0 }}>
+        {label}
+      </p>
+
+      {/* Angka besar */}
+      <strong style={{ fontSize: '2.4rem', fontWeight: 800, marginTop: 6, display: 'block', color: iconColor, lineHeight: 1.1 }}>
+        {value ?? <span style={{ opacity: 0.25, color: '#1a2a57' }}>—</span>}
+      </strong>
+
+      {/* Detail + Icon di bawah */}
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 10, gap: 8 }}>
+        <p className="dashboard-card__detail" style={{ margin: 0, fontSize: '0.79rem', color: 'rgba(26,42,87,0.45)' }}>{detail}</p>
         <div style={{
-          width: 38, height: 38, borderRadius: 10, flexShrink: 0,
-          background: `${accentColor}18`,
+          width: 38, height: 38, borderRadius: 11, flexShrink: 0,
+          background: `${accentColor}15`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           color: iconColor,
         }}>
           {icon}
         </div>
       </div>
-      <strong className="dashboard-card__value" style={{ fontSize: '2.1rem', marginTop: 10 }}>
-        {value ?? <span style={{ opacity: 0.3 }}>—</span>}
-      </strong>
-      <p className="dashboard-card__detail" style={{ marginTop: 4, fontSize: '0.82rem' }}>{detail}</p>
     </div>
   );
 }
@@ -196,10 +235,6 @@ export default function Dashboard() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [revertId, setRevertId] = useState(null);
-  const [reverting, setReverting] = useState(false);
-  const [detailForm, setDetailForm] = useState(null);
-
   const fetchData = () => {
     setLoading(true);
     Promise.all([
@@ -210,25 +245,13 @@ export default function Dashboard() {
         setAllForms(formsRes.data.data || []);
         setStats(statsRes.data.data || null);
       })
-      .catch(() => setError('Gagal memuat data. Pastikan server backend berjalan.'))
+      .catch(() => setError('Failed to load data. Make sure the backend server is running.'))
       .finally(() => setLoading(false));
   };
 
   useEffect(() => { fetchData(); }, []);
 
-  const handleRevert = () => {
-    if (!revertId) return;
-    setReverting(true);
-    axios.patch(`${API}/${revertId}/status`, { status: 'pending' })
-      .then(() => fetchData())
-      .then(() => setRevertId(null))
-      .catch(() => setError('Gagal mengembalikan form. Coba lagi.'))
-      .finally(() => setReverting(false));
-  };
-
-  const recentForms = [...allForms]
-    .sort((a, b) => b.id - a.id)
-    .slice(0, 10);
+  const recentForms = [...allForms].sort((a, b) => b.id - a.id).slice(0, 10);
 
   const headerAction = (
     <button
@@ -244,16 +267,28 @@ export default function Dashboard() {
   );
 
   return (
-    <Box sx={{ height: '100%', width: '100%', overflowY: 'auto', overflowX: 'hidden' }}>
+    <Box sx={{ width: '100%' }}>
       <Container disableGutters maxWidth={false} sx={{ width: '100%' }}>
         <Box sx={pageSx}>
           {error && <Alert severity="error" onClose={() => setError('')} sx={{ flexShrink: 0 }}>{error}</Alert>}
 
           {/* Stat Cards — top row */}
-          <div
-            className="dash-stat-grid"
-            style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 14, flexShrink: 0 }}
-          >
+          <Box sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: 'repeat(2, minmax(0,1fr))', sm: 'repeat(4, minmax(0,1fr))' },
+            gap: { xs: '10px', sm: '14px' },
+            '@keyframes fadeSlideUp': {
+              from: { opacity: 0, transform: 'translateY(16px)' },
+              to:   { opacity: 1, transform: 'translateY(0)' },
+            },
+            '& > *': {
+              animation: 'fadeSlideUp 0.42s cubic-bezier(0.22,1,0.36,1) both',
+            },
+            '& > *:nth-of-type(1)': { animationDelay: '0.04s' },
+            '& > *:nth-of-type(2)': { animationDelay: '0.09s' },
+            '& > *:nth-of-type(3)': { animationDelay: '0.14s' },
+            '& > *:nth-of-type(4)': { animationDelay: '0.19s' },
+          }}>
             <StatCard
               label="Total Form"
               value={stats?.total}
@@ -271,9 +306,9 @@ export default function Dashboard() {
               icon={<Check size={18} />}
             />
             <StatCard
-              label="Menunggu Approval"
+              label="Menunggu"
               value={stats?.pending}
-              detail="Perlu ditindaklanjuti"
+              detail="Perlu tindakan"
               iconColor="#c08b00"
               accentColor="#e9c46a"
               icon={<RefreshCw05 size={18} />}
@@ -286,10 +321,12 @@ export default function Dashboard() {
               accentColor="#e76f51"
               icon={<XClose size={18} />}
             />
-          </div>
+          </Box>
 
           {/* Analytics Row: Donut + Division Ranking */}
-          <div className="dash-analytics-row">
+          <div className="dash-analytics-row" style={{
+            animation: 'fadeSlideUp 0.44s cubic-bezier(0.22,1,0.36,1) 0.22s both',
+          }}>
             {/* Donut Chart */}
             <div className="dashboard-card dash-chart-card">
               <p className="dashboard-card__label" style={{ marginBottom: 14 }}>Distribusi Status Form</p>
@@ -327,11 +364,12 @@ export default function Dashboard() {
             <DivisionRanking forms={allForms} />
           </div>
 
-          {/* 10 Data Terbaru */}
+          {/* Semua Data */}
           <CardBigBox
-            eyebrow="10 Form Terakhir"
-            title="Data Terbaru"
+            eyebrow={`${recentForms.length} form tersimpan`}
+            title="Data Terkini"
             headerAction={headerAction}
+            style={{ animation: 'fadeSlideUp 0.44s cubic-bezier(0.22,1,0.36,1) 0.30s both' }}
           >
             {loading ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
@@ -341,7 +379,7 @@ export default function Dashboard() {
               <Box className="dashboard-empty-state">
                 <FileText01 size={48} style={{ opacity: 0.3, margin: '0 auto 12px', display: 'block' }} />
                 <p className="dashboard-empty-state__title">Belum ada form</p>
-                <p className="dashboard-empty-state__detail">Buat form baru untuk memulai.</p>
+                <p className="dashboard-empty-state__detail">Buat form baru untuk memulai pengajuan lembur.</p>
               </Box>
             ) : (
               <>
@@ -350,7 +388,7 @@ export default function Dashboard() {
                   component={Paper}
                   elevation={0}
                   sx={{
-                    maxHeight: 295,
+                    maxHeight: 228,
                     overflowY: 'auto',
                     overflowX: 'auto',
                     border: '1px solid',
@@ -359,58 +397,64 @@ export default function Dashboard() {
                     '@media (max-width: 768px)': { display: 'none' },
                   }}
                 >
-                  <Table size="small" stickyHeader sx={{ minWidth: 680, '& .MuiTableCell-root': cellSx }}>
+                  <Table size="small" stickyHeader sx={{
+                    minWidth: 820,
+                    '& .MuiTableCell-root': cellSx,
+                    '& .MuiTableHead-root .MuiTableCell-root': {
+                      fontSize: '0.74rem', fontWeight: 800, color: '#607089',
+                      backgroundColor: '#f3f6fa',
+                      borderBottom: '1px solid rgba(26,42,87,0.1)',
+                      position: 'sticky', top: 0, zIndex: 2,
+                    },
+                    '& .MuiTableBody-root .MuiTableRow-root:hover td': { background: 'rgba(237,242,250,0.9)' },
+                    '& .MuiTableBody-root .MuiTableRow-root:nth-of-type(even) td': { background: 'rgba(248,250,252,0.6)' },
+                    '& .MuiTableBody-root .MuiTableRow-root:nth-of-type(even):hover td': { background: 'rgba(237,242,250,0.9)' },
+                  }}>
                     <TableHead>
                       <TableRow>
-                        <TableCell>No. Form</TableCell>
-                        <TableCell>Department</TableCell>
-                        <TableCell>Tgl Pengajuan</TableCell>
-                        <TableCell>Lembur Pada</TableCell>
-                        <TableCell align="center">Entri</TableCell>
-                        <TableCell>Status</TableCell>
-                        <TableCell align="center">Aksi</TableCell>
+                        <TableCell sx={{ width: 170 }}>No. Form</TableCell>
+                        <TableCell sx={{ width: 100 }}>Jenis</TableCell>
+                        <TableCell sx={{ minWidth: 120 }}>Departemen</TableCell>
+                        <TableCell sx={{ minWidth: 130 }}>Diperintah</TableCell>
+                        <TableCell sx={{ width: 115, whiteSpace: 'nowrap' }}>Tgl. Pengajuan</TableCell>
+                        <TableCell sx={{ width: 105 }}>Hari Lembur</TableCell>
+                        <TableCell sx={{ width: 70, whiteSpace: 'nowrap' }} align="center">Jml.</TableCell>
+                        <TableCell sx={{ width: 115 }}>Status</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {recentForms.map((form) => (
                         <TableRow key={form.id} hover>
                           <TableCell>
-                            <Typography variant="body2" fontWeight={800} color="primary.main">{form.nomerForm}</Typography>
-                            {form.kodeDivisi && <Chip label={form.kodeDivisi} color="primary" size="small" sx={{ mt: 0.25 }} />}
+                            <Typography variant="body2" fontWeight={800} color="primary.main" noWrap>
+                              {form.nomerForm}
+                            </Typography>
+                          </TableCell>
+                          <TableCell><FormTypeBadge jenisForm={form.jenisForm} /></TableCell>
+                          <TableCell>
+                            <Typography variant="body2" fontWeight={700} noWrap>{form.department}</Typography>
                           </TableCell>
                           <TableCell>
-                            <Typography variant="body2" fontWeight={700}>{form.department}</Typography>
-                            <Typography variant="caption" color="text.secondary">{form.diperintahOleh}</Typography>
+                            <Typography variant="body2" color="text.secondary" noWrap>{form.diperintahOleh || '-'}</Typography>
                           </TableCell>
-                          <TableCell>
+                          <TableCell sx={{ whiteSpace: 'nowrap' }}>
                             <Typography variant="body2">{form.tanggalPengajuan}</Typography>
                           </TableCell>
                           <TableCell>
                             <Chip
-                              label={form.lemburPada}
+                              label={form.lemburPada || '-'}
                               size="small"
                               color={form.lemburPada === 'Hari Libur' ? 'error' : 'default'}
                               variant="outlined"
+                              sx={{ fontSize: '0.72rem', height: 22 }}
                             />
                           </TableCell>
                           <TableCell align="center">
-                            <Typography variant="body2" fontWeight={700}>{form.entries?.length ?? 0}</Typography>
+                            <Typography variant="body2" fontWeight={700} color="text.secondary" fontSize="0.78rem">
+                              {form.entries?.length ?? 0}
+                            </Typography>
                           </TableCell>
                           <TableCell><StatusChip status={form.status} /></TableCell>
-                          <TableCell align="center" onClick={(e) => e.stopPropagation()} sx={{ whiteSpace: 'nowrap' }}>
-                            <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
-                              <CreateButton variant="accordion" onClick={() => setDetailForm(form)}>
-                                <FactCheckRoundedIcon sx={{ fontSize: 14 }} />
-                                Detail
-                              </CreateButton>
-                              {canRevertForm(user, form) && form.status !== 'pending' && (
-                                <CreateButton variant="accordion" onClick={() => setRevertId(form.id)}>
-                                  <RestoreRoundedIcon sx={{ fontSize: 14 }} />
-                                  Kembalikan
-                                </CreateButton>
-                              )}
-                            </Box>
-                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -420,47 +464,57 @@ export default function Dashboard() {
                 {/* Mobile cards */}
                 <Box sx={{
                   display: 'none',
-                  '@media (max-width: 768px)': { display: 'flex', flexDirection: 'column', gap: '10px' },
+                  '@media (max-width: 768px)': {
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px',
+                    maxHeight: '60vh',
+                    overflowY: 'auto',
+                    WebkitOverflowScrolling: 'touch',
+                    pr: 0.5,
+                  },
                 }}>
                   {recentForms.map((form) => (
-                    <div key={form.id} className="approval-card approval-card--dashboard">
+                    <div key={form.id} className="dashboard-stack__item approval-card approval-card--dashboard">
                       <div className="approval-card__header">
                         <div className="approval-card__info">
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 5 }}>
-                            <Typography variant="body2" fontWeight={800} color="primary.main">{form.nomerForm}</Typography>
+                          <div className="approval-card__topline">
+                            <Typography variant="subtitle2" fontWeight={800} color="primary.main" sx={{ fontSize: '0.92rem' }}>
+                              {form.nomerForm}
+                            </Typography>
                             <StatusChip status={form.status} />
-                            {form.kodeDivisi && <Chip label={form.kodeDivisi} color="primary" size="small" />}
+                            <FormTypeBadge jenisForm={form.jenisForm} />
                           </div>
-                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.82rem', mb: 0.5 }}>
-                            <strong>{form.department}</strong>
-                            {form.diperintahOleh && <> · {form.diperintahOleh}</>}
-                          </Typography>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                            <Typography variant="caption" color="text.secondary">{form.tanggalPengajuan}</Typography>
+                          <div className="approval-card__meta">
+                            <span className="approval-card__meta-item">
+                              <span className="approval-card__meta-label">Departemen</span>
+                              <strong>{form.department}</strong>
+                            </span>
+                            <span className="approval-card__meta-separator" aria-hidden="true" />
+                            <span className="approval-card__meta-item">
+                              <span className="approval-card__meta-label">Diperintah</span>
+                              <strong>{form.diperintahOleh || '-'}</strong>
+                            </span>
+                            <span className="approval-card__meta-separator" aria-hidden="true" />
+                            <span className="approval-card__meta-item">
+                              <span className="approval-card__meta-label">Tanggal</span>
+                              <strong>{form.tanggalPengajuan}</strong>
+                            </span>
+                          </div>
+                          <div className="approval-card__summary approval-card__summary--simple">
+                            <div className="approval-card__summary-item approval-card__summary-item--muted">
+                              <Typography variant="caption" color="text.secondary">{form.entries?.length ?? 0} karyawan</Typography>
+                            </div>
                             {form.lemburPada && (
                               <Chip
                                 label={form.lemburPada}
                                 size="small"
                                 color={form.lemburPada === 'Hari Libur' ? 'error' : 'default'}
                                 variant="outlined"
+                                sx={{ height: 20, fontSize: '0.68rem' }}
                               />
                             )}
-                            <Typography variant="caption" color="text.secondary">
-                              {form.entries?.length ?? 0} karyawan
-                            </Typography>
                           </div>
-                        </div>
-                        <div className="approval-card__actions">
-                          <CreateButton variant="accordion" onClick={() => setDetailForm(form)}>
-                            <FactCheckRoundedIcon sx={{ fontSize: 14 }} />
-                            Detail
-                          </CreateButton>
-                          {canRevertForm(user, form) && form.status !== 'pending' && (
-                            <CreateButton variant="accordion" onClick={() => setRevertId(form.id)}>
-                              <RestoreRoundedIcon sx={{ fontSize: 14 }} />
-                              Kembalikan
-                            </CreateButton>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -472,64 +526,6 @@ export default function Dashboard() {
         </Box>
       </Container>
 
-      {/* Detail popup */}
-      {detailForm && typeof document !== 'undefined' && createPortal(
-        <div className="dashboard-popup-overlay" role="presentation" onClick={() => setDetailForm(null)}>
-          <div
-            className="dashboard-popup dashboard-popup--frp-detail"
-            role="dialog" aria-modal="true"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="dashboard-popup__header">
-              <div>
-                <p className="dashboard-popup__eyebrow">Detail Form Lembur</p>
-                <h2 className="dashboard-popup__title">{detailForm.nomerForm}</h2>
-              </div>
-              <button type="button" className="dashboard-popup__close" aria-label="Tutup" onClick={() => setDetailForm(null)}>
-                <XClose size={18} />
-              </button>
-            </div>
-            <div className="dashboard-popup__body--frp-detail">
-              <div style={{ height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <DetailLemburContent formId={detailForm.id} onClose={null} inPopup={true} />
-              </div>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-
-      {/* Revert confirmation popup */}
-      {!!revertId && typeof document !== 'undefined' && createPortal(
-        <div className="dashboard-popup-overlay" role="presentation" onClick={() => !reverting && setRevertId(null)}>
-          <div className="dashboard-popup" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-            <div className="dashboard-popup__header">
-              <div>
-                <p className="dashboard-popup__eyebrow">Konfirmasi Kembalikan</p>
-                <h2 className="dashboard-popup__title">Kembalikan Form Ini?</h2>
-              </div>
-              <button type="button" className="dashboard-popup__close" aria-label="Tutup" onClick={() => !reverting && setRevertId(null)}>
-                <XClose size={18} />
-              </button>
-            </div>
-            <div className="dashboard-popup__body">
-              <p className="dashboard-popup__text">
-                Form ini akan dikembalikan ke status <strong>Menunggu Approval</strong> dan perlu diproses ulang.
-              </p>
-            </div>
-            <div className="dashboard-popup__actions">
-              <button type="button" className="dashboard-popup__button dashboard-popup__button--secondary" onClick={() => setRevertId(null)} disabled={reverting}>
-                Batal
-              </button>
-              <button type="button" className="dashboard-popup__button dashboard-popup__button--primary" onClick={handleRevert} disabled={reverting}>
-                {reverting && <CircularProgress size={14} color="inherit" style={{ marginRight: 8 }} />}
-                {reverting ? 'Memproses...' : 'Ya, Kembalikan'}
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
     </Box>
   );
 }

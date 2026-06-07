@@ -29,14 +29,14 @@ export function printLemburForm(form) {
     return `
       <tr>
         <td class="col-no">${idx + 1}</td>
-        <td class="col-nama"><strong>${esc(entry.nama)}</strong></td>
-        <td class="col-id">${esc(entry.idKaryawan) || '-'}</td>
-        <td class="col-tgl">${esc(entry.tanggalLembur) || '-'}</td>
-        <td class="col-waktu">${esc(entry.jamMulai) || '-'}</td>
-        <td class="col-waktu">${esc(entry.jamSelesai) || '-'}</td>
-        <td class="col-tugas">${esc(entry.tugas) || '-'}</td>
-        <td class="col-hasil">${esc(entry.hasil) || '-'}</td>
-        <td class="col-komp">${esc(entry.kompensasi) || '-'}</td>
+        <td class="col-nama"><strong>${esc(entry.name)}</strong></td>
+        <td class="col-id">${esc(entry.employeeId) || '-'}</td>
+        <td class="col-tgl">${esc(entry.overtimeDate) || '-'}</td>
+        <td class="col-waktu">${esc(entry.startTime) || '-'}</td>
+        <td class="col-waktu">${esc(entry.endTime) || '-'}</td>
+        <td class="col-tugas">${esc(entry.task) || '-'}</td>
+        <td class="col-hasil">${esc(entry.result) || '-'}</td>
+        <td class="col-komp">${esc(entry.compensation) || '-'}</td>
         <td class="col-status">
           <span class="status-dot ${approved ? 'status-dot--approved' : 'status-dot--pending'}"></span>
         </td>
@@ -47,7 +47,7 @@ export function printLemburForm(form) {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Overtime Form - ${esc(form.nomerForm)}</title>
+  <title>Overtime Form - ${esc(form.formNumber)}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -179,7 +179,7 @@ export function printLemburForm(form) {
 
   <div class="print-title">
     <h1>Overtime Order Form</h1>
-    <div class="form-number">No. Form: <strong>${esc(form.nomerForm) || '-'}</strong></div>
+    <div class="form-number">No. Form: <strong>${esc(form.formNumber) || '-'}</strong></div>
   </div>
 
   <hr class="print-divider" />
@@ -187,7 +187,7 @@ export function printLemburForm(form) {
   <div class="print-meta">
     <div class="print-meta-row">
       <span class="print-meta-label">Division</span>
-      <span class="print-meta-value">${esc(form.kodeDivisi) || '-'}</span>
+      <span class="print-meta-value">${esc(form.divisionCode) || '-'}</span>
     </div>
     <div class="print-meta-row">
       <span class="print-meta-label">Class</span>
@@ -199,15 +199,15 @@ export function printLemburForm(form) {
     </div>
     <div class="print-meta-row">
       <span class="print-meta-label">Overtime Day</span>
-      <span class="print-meta-value">${esc(formatLemburPada(form.lemburPada))}</span>
+      <span class="print-meta-value">${esc(formatLemburPada(form.overtimeDay))}</span>
     </div>
     <div class="print-meta-row">
       <span class="print-meta-label">Requested By</span>
-      <span class="print-meta-value">${esc(form.diperintahOleh) || '-'}</span>
+      <span class="print-meta-value">${esc(form.requestedBy) || '-'}</span>
     </div>
     <div class="print-meta-row">
       <span class="print-meta-label">Submission Date</span>
-      <span class="print-meta-value">${esc(form.tanggalPengajuan) || '-'}</span>
+      <span class="print-meta-value">${esc(form.submissionDate) || '-'}</span>
     </div>
     <div class="print-meta-row">
       <span class="print-meta-label">Email</span>
@@ -244,7 +244,7 @@ export function printLemburForm(form) {
   <div class="print-signatures">
     <div class="sig-box">
       <div class="sig-box__label">Requested by</div>
-      <div class="sig-box__name">${esc(form.diperintahOleh) || '___________________'}</div>
+      <div class="sig-box__name">${esc(form.requestedBy) || '___________________'}</div>
     </div>
     <div class="sig-box">
       <div class="sig-box__label">Acknowledged by</div>

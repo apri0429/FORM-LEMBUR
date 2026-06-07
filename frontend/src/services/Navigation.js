@@ -8,7 +8,7 @@ import {
   Settings01,
   Chart01,
   LogOut01,
-} from '../components/template/TemplateIcons.jsx'
+} from '../components/layout/icons.jsx'
 
 export const defaultNavigationPath = '/dashboard'
 
@@ -32,7 +32,7 @@ export const primaryNavigationItems = [
   },
   {
     id: 'buat-form',
-    label: 'Buat Form',
+    label: 'Create Form',
     href: '/form/baru',
     icon: FilePlus,
   },
@@ -53,7 +53,7 @@ export const primaryNavigationItems = [
 export const hrNavigationItems = [
   {
     id: 'laporan',
-    label: 'Laporan',
+    label: 'Reports',
     href: '/laporan',
     icon: Chart01,
   },
@@ -65,8 +65,8 @@ export const adminNavigationItems = [
     label: 'Master Data',
     icon: Settings01,
     children: [
-      { id: 'karyawan', label: 'Karyawan', href: '/admin/employees', icon: Users01 },
-      { id: 'departemen', label: 'Departemen', href: '/admin/departments', icon: Table01 },
+      { id: 'karyawan', label: 'Employees', href: '/admin/employees', icon: Users01 },
+      { id: 'departemen', label: 'Departments', href: '/admin/departments', icon: Table01 },
     ],
   },
 ]
@@ -74,7 +74,7 @@ export const adminNavigationItems = [
 export const secondaryNavigationItems = [
   {
     id: 'logout',
-    label: 'Keluar',
+    label: 'Logout',
     action: 'logout',
     icon: LogOut01,
     variant: 'danger',

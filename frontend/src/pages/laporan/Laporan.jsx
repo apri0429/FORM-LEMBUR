@@ -1,5 +1,4 @@
-﻿import React, { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useEffect, useState } from 'react';
 import {
   Alert, Box, CircularProgress, Container, MenuItem, TextField, Typography,
 } from '@mui/material';
@@ -7,22 +6,23 @@ import ApartmentRoundedIcon from '@mui/icons-material/ApartmentRounded';
 import AssignmentIndRoundedIcon from '@mui/icons-material/AssignmentIndRounded';
 import BadgeRoundedIcon from '@mui/icons-material/BadgeRounded';
 import CalendarMonthRoundedIcon from '@mui/icons-material/CalendarMonthRounded';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import EventNoteRoundedIcon from '@mui/icons-material/EventNoteRounded';
-import FileDownloadRoundedIcon from '@mui/icons-material/FileDownloadRounded';
 import FilterListRoundedIcon from '@mui/icons-material/FilterListRounded';
 import ManageAccountsRoundedIcon from '@mui/icons-material/ManageAccountsRounded';
-import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
-import TableChartRoundedIcon from '@mui/icons-material/TableChartRounded';
 import WorkRoundedIcon from '@mui/icons-material/WorkRounded';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
+
 import CardBigBox from '../../components/ui/CardBigBox';
-import DataTable from '../../piagam/table/DataTable';
-import { ChevronDown, Check, SearchMd, XClose } from '../../components/layout/icons';
+import DataTable from '../../components/ui/DataTable';
+import { SelectFilter, RowsFilter } from '../../components/ui/SelectFilter';
+import { ChevronDown, SearchMd, XClose } from '../../components/layout/icons';
+import TalentaToggle from './TalentaToggle';
+import ExportDropdown from './ExportDropdown';
 
 const API = '/api/laporan';
 const ROWS_OPTIONS = [10, 25, 50, 100];
+
 const BULAN_OPTIONS = [
   { value: '01', label: 'January' },
   { value: '02', label: 'February' },
@@ -37,6 +37,13 @@ const BULAN_OPTIONS = [
   { value: '11', label: 'November' },
   { value: '12', label: 'December' },
 ];
+
+const FORM_TYPE_CHIP_MAP = {
+  staff:        { label: 'Staff',        color: '#1a2a57', bg: 'rgba(26,42,87,0.08)',    icon: BadgeRoundedIcon },
+  manager:      { label: 'Manager',      color: '#0277bd', bg: 'rgba(2,119,189,0.1)',    icon: ManageAccountsRoundedIcon },
+  outsourcing:  { label: 'Outsourcing',  color: '#e65100', bg: 'rgba(230,81,0,0.09)',   icon: WorkRoundedIcon },
+  harian_lepas: { label: 'Daily Worker', color: '#6a1b9a', bg: 'rgba(106,27,154,0.09)', icon: EventNoteRoundedIcon },
+};
 
 const pageSx = {
   height: '100%',
@@ -65,241 +72,6 @@ const pageSx = {
   },
 };
 
-const FORM_TYPE_CHIP_MAP = {
-  staff:        { label: 'Staff',        color: '#1a2a57', bg: 'rgba(26,42,87,0.08)',    icon: BadgeRoundedIcon },
-  manager:      { label: 'Manager',      color: '#0277bd', bg: 'rgba(2,119,189,0.1)',    icon: ManageAccountsRoundedIcon },
-  outsourcing:  { label: 'Outsourcing',  color: '#e65100', bg: 'rgba(230,81,0,0.09)',   icon: WorkRoundedIcon },
-  harian_lepas: { label: 'Daily Worker', color: '#6a1b9a', bg: 'rgba(106,27,154,0.09)', icon: EventNoteRoundedIcon },
-};
-
-function SelectFilter({ value, onChange, options }) {
-  const [open, setOpen] = useState(false);
-  const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0 });
-  const triggerRef = useRef(null);
-  const wrapRef = useRef(null);
-
-  const calcPos = () => {
-    if (!triggerRef.current) return;
-    const rect = triggerRef.current.getBoundingClientRect();
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const openUp = spaceBelow < 200 && rect.top > 200;
-    setDropPos({
-      top: openUp ? null : rect.bottom + 6,
-      bottom: openUp ? window.innerHeight - rect.top + 6 : null,
-      left: rect.left,
-      width: rect.width,
-      openUp,
-    });
-  };
-
-  useEffect(() => {
-    if (!open) return;
-    calcPos();
-    const handler = (e) => {
-      if (
-        triggerRef.current && !triggerRef.current.contains(e.target) &&
-        wrapRef.current && !wrapRef.current.contains(e.target)
-      ) setOpen(false);
-    };
-    const onScroll = () => calcPos();
-    document.addEventListener('mousedown', handler);
-    window.addEventListener('scroll', onScroll, true);
-    window.addEventListener('resize', onScroll);
-    return () => {
-      document.removeEventListener('mousedown', handler);
-      window.removeEventListener('scroll', onScroll, true);
-      window.removeEventListener('resize', onScroll);
-    };
-  }, [open]);
-
-  const selectedLabel = options.find((o) => o.value === value)?.label;
-
-  return (
-    <div className="sf-wrap">
-      <button
-        ref={triggerRef}
-        type="button"
-        className={`sf-trigger${open ? ' sf-trigger--open' : ''}`}
-        onClick={() => setOpen((o) => !o)}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-      >
-        <span className="sf-value">{selectedLabel}</span>
-        <ChevronDown size={16} className="sf-chevron" />
-      </button>
-      {open && typeof document !== 'undefined' && createPortal(
-        <div
-          ref={wrapRef}
-          className="sf-dropdown"
-          role="listbox"
-          style={{
-            position: 'fixed',
-            ...(dropPos.openUp
-              ? { bottom: dropPos.bottom, top: 'auto' }
-              : { top: dropPos.top, bottom: 'auto' }
-            ),
-            left: dropPos.left,
-            width: dropPos.width,
-            zIndex: 9999,
-          }}
-        >
-          {options.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              className={`sf-option${value === opt.value ? ' sf-option--active' : ''}`}
-              role="option"
-              aria-selected={value === opt.value}
-              onClick={() => { onChange(opt.value); setOpen(false); }}
-            >
-              {opt.label}
-              {value === opt.value && <Check size={14} />}
-            </button>
-          ))}
-        </div>,
-        document.body
-      )}
-    </div>
-  );
-}
-
-function RowsFilter({ rowsPerPage, onChange }) {
-  return (
-    <div className="approval-desktop-rows">
-      <span className="approval-unified-pagination__label">View</span>
-      <SelectFilter
-        value={String(rowsPerPage)}
-        onChange={onChange}
-        options={ROWS_OPTIONS.map((r) => ({ value: String(r), label: String(r) }))}
-      />
-      <span className="approval-unified-pagination__label">rows</span>
-    </div>
-  );
-}
-
-function FormTypeBadge({ jenisForm }) {
-  const cfg = FORM_TYPE_CHIP_MAP[jenisForm];
-  if (!cfg) return <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>{jenisForm || '-'}</span>;
-  const Icon = cfg.icon;
-  return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 4,
-      height: 24, padding: '0 8px', borderRadius: 12,
-      fontSize: '0.8125rem', fontWeight: 700,
-      color: cfg.color, background: cfg.bg, whiteSpace: 'nowrap',
-    }}>
-      <Icon style={{ fontSize: 14, flexShrink: 0 }} />
-      {cfg.label}
-    </span>
-  );
-}
-
-function TalentaToggle({ row, onToggle, isLoading }) {
-  const done = !!row.talentaInput;
-  return (
-    <button
-      type="button"
-      onClick={() => onToggle(row)}
-      disabled={isLoading}
-      title={done ? 'Done — click to undo' : 'Not done — click to mark as done'}
-      style={{
-        display: 'inline-flex', alignItems: 'center', gap: 5,
-        height: 26, padding: '0 10px', borderRadius: 13,
-        fontSize: '0.77rem', fontWeight: 700,
-        cursor: isLoading ? 'wait' : 'pointer',
-        border: `1.5px solid ${done ? 'rgba(46,125,50,0.2)' : 'rgba(194,96,0,0.2)'}`,
-        background: done ? 'rgba(46,125,50,0.08)' : 'rgba(245,124,0,0.07)',
-        color: done ? '#2e7d32' : '#c26000',
-        transition: 'all 0.18s',
-        outline: 'none',
-      }}
-    >
-      {isLoading
-        ? <CircularProgress size={11} color="inherit" />
-        : done
-          ? <CheckCircleOutlineIcon style={{ fontSize: 14 }} />
-          : <RadioButtonUncheckedIcon style={{ fontSize: 14 }} />}
-      {done ? 'Done' : 'Pending'}
-    </button>
-  );
-}
-
-const EXPORT_ITEMS = [
-  { label: 'Export CSV',   desc: 'Download .csv file',   color: '#1a5276', bg: '#eaf1fb', icon: FileDownloadRoundedIcon },
-  { label: 'Export Excel', desc: 'Download .xlsx file',  color: '#1e8449', bg: '#eafaf1', icon: TableChartRoundedIcon   },
-];
-
-function ExportDropdown({ onCSV, onExcel }) {
-  const [open, setOpen] = React.useState(false);
-  const ref = React.useRef(null);
-
-  React.useEffect(() => {
-    if (!open) return;
-    const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener('mousedown', close);
-    return () => document.removeEventListener('mousedown', close);
-  }, [open]);
-
-  const items = EXPORT_ITEMS.map((it, i) => ({
-    ...it, action: [onCSV, onExcel][i],
-  }));
-
-  return (
-    <div ref={ref} style={{ position: 'relative' }}>
-      <button
-        type="button"
-        onClick={() => setOpen(p => !p)}
-        className="add-board-button"
-        style={{ gap: 6 }}
-      >
-        <FileDownloadRoundedIcon style={{ fontSize: 15 }} />
-        Export
-        <ChevronDown size={13} style={{ transition: 'transform 0.2s', transform: open ? 'rotate(180deg)' : 'none', opacity: 0.7 }} />
-      </button>
-
-      {open && (
-        <div style={{
-          position: 'absolute', right: 0, top: 'calc(100% + 8px)', zIndex: 200,
-          background: '#fff', borderRadius: 14,
-          boxShadow: '0 12px 40px rgba(26,42,87,0.16), 0 2px 8px rgba(0,0,0,0.06)',
-          border: '1px solid rgba(26,42,87,0.08)',
-          minWidth: 210, overflow: 'hidden', padding: '6px',
-        }}>
-          <p style={{ margin: '4px 10px 6px', fontSize: '0.68rem', fontWeight: 700, color: '#aab4c4', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-            Download Data
-          </p>
-          {items.map(({ label, desc, color, bg, icon: Icon, action }) => (
-            <button
-              key={label}
-              type="button"
-              onClick={() => { action(); setOpen(false); }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-                padding: '8px 10px', borderRadius: 9,
-                background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
-                transition: 'background 0.13s',
-              }}
-              onMouseEnter={e => e.currentTarget.style.background = bg}
-              onMouseLeave={e => e.currentTarget.style.background = 'none'}
-            >
-              <div style={{
-                width: 32, height: 32, borderRadius: 8, flexShrink: 0,
-                background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <Icon style={{ fontSize: 16, color }} />
-              </div>
-              <div>
-                <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 700, color: '#1a2a57', lineHeight: 1.2 }}>{label}</p>
-                <p style={{ margin: 0, fontSize: '0.7rem', color: '#8fa3b8', lineHeight: 1.2 }}>{desc}</p>
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 const selectSx = {
   width: '100%', minWidth: '100%',
   '& .MuiOutlinedInput-root': {
@@ -318,29 +90,43 @@ const selectSx = {
   '& .MuiSelect-icon': { color: '#6b7a90', right: 12 },
 };
 
+function FormTypeBadge({ jenisForm }) {
+  const cfg = FORM_TYPE_CHIP_MAP[jenisForm];
+  if (!cfg) return <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>{jenisForm || '-'}</span>;
+  const Icon = cfg.icon;
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      height: 24, padding: '0 8px', borderRadius: 12,
+      fontSize: '0.8125rem', fontWeight: 700,
+      color: cfg.color, background: cfg.bg, whiteSpace: 'nowrap',
+    }}>
+      <Icon style={{ fontSize: 14, flexShrink: 0 }} />
+      {cfg.label}
+    </span>
+  );
+}
 
 export default function Laporan() {
-  const [rows, setRows] = useState([]);
-  const [total, setTotal] = useState(0);
+  const [rows, setRows]           = useState([]);
+  const [total, setTotal]         = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [deptOptions, setDeptOptions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [filterBulan, setFilterBulan] = useState('');
-  const [filterDept, setFilterDept] = useState('');
-  const [filterJenis, setFilterJenis] = useState('');
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState('');
+  const [filterBulan, setFilterBulan]   = useState('');
+  const [filterDept, setFilterDept]     = useState('');
+  const [filterJenis, setFilterJenis]   = useState('');
   const [filterTalenta, setFilterTalenta] = useState('');
-  const [page, setPage] = useState(1);
+  const [page, setPage]           = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(25);
-  const [toggling, setToggling] = useState(new Set());
+  const [toggling, setToggling]   = useState(new Set());
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
-  const [search, setSearch] = useState('');
+  const [search, setSearch]       = useState('');
 
   useEffect(() => {
     axios.get(`${API}/filter-options`)
-      .then(r => {
-        setDeptOptions(r.data.data?.departments || []);
-      })
+      .then((r) => setDeptOptions(r.data.data?.departments || []))
       .catch(() => {});
   }, []);
 
@@ -354,7 +140,7 @@ export default function Laporan() {
     if (search.trim()) params.search       = search.trim();
 
     axios.get(API, { params })
-      .then(r => {
+      .then((r) => {
         const pg = r.data.pagination;
         setRows(r.data.data || []);
         setTotal(pg?.total || 0);
@@ -369,19 +155,19 @@ export default function Laporan() {
   const handleToggle = async (row) => {
     const id = row.entryId;
     const next = !row.talentaInput;
-    setRows(prev => prev.map(r => r.entryId === id ? { ...r, talentaInput: next } : r));
-    setToggling(prev => new Set(prev).add(id));
+    setRows((prev) => prev.map((r) => r.entryId === id ? { ...r, talentaInput: next } : r));
+    setToggling((prev) => new Set(prev).add(id));
     try {
       await axios.patch(`${API}/entry/${id}/talenta`, { talentaInput: next });
     } catch {
-      setRows(prev => prev.map(r => r.entryId === id ? { ...r, talentaInput: !next } : r));
+      setRows((prev) => prev.map((r) => r.entryId === id ? { ...r, talentaInput: !next } : r));
       setError('Failed to update Talenta status. Please try again.');
     } finally {
-      setToggling(prev => { const s = new Set(prev); s.delete(id); return s; });
+      setToggling((prev) => { const s = new Set(prev); s.delete(id); return s; });
     }
   };
 
-  const getLabel = r => FORM_TYPE_CHIP_MAP[r.formType]?.label || r.formType || '';
+  const getLabel = (r) => FORM_TYPE_CHIP_MAP[r.formType]?.label || r.formType || '';
 
   const fetchAllForExport = async () => {
     const params = {};
@@ -400,7 +186,7 @@ export default function Laporan() {
       'Employee Name', 'Employee ID', 'Overtime Date', 'Start Time', 'End Time',
       'Compensation', 'Talenta Input'];
     const lines = [headers.join(',')];
-    allRows.forEach(r => {
+    allRows.forEach((r) => {
       lines.push([
         `"${r.formNumber || ''}"`, `"${getLabel(r)}"`, `"${r.department || ''}"`,
         `"${r.requestedBy || ''}"`, `"${r.name || ''}"`, `"${r.employeeId || ''}"`,
@@ -419,21 +205,21 @@ export default function Laporan() {
 
   const exportExcel = async () => {
     const allRows = await fetchAllForExport();
-    const data = allRows.map(r => ({
-      'Form No.': r.formNumber || '',
-      'Form Type': getLabel(r),
-      'Department': r.department || '',
-      'Ordered By': r.requestedBy || '',
+    const data = allRows.map((r) => ({
+      'Form No.':     r.formNumber || '',
+      'Form Type':    getLabel(r),
+      'Department':   r.department || '',
+      'Ordered By':   r.requestedBy || '',
       'Employee Name': r.name || '',
-      'Employee ID': r.employeeId || '',
+      'Employee ID':  r.employeeId || '',
       'Overtime Date': r.overtimeDate || '',
-      'Start Time': r.startTime || '',
-      'End Time': r.endTime || '',
+      'Start Time':   r.startTime || '',
+      'End Time':     r.endTime || '',
       'Compensation': r.compensation || '',
       'Talenta Input': r.talentaInput ? 'Done' : 'Pending',
-      'Form Status': r.formStatus || '',
-      'Approved By': r.approvedBy || '',
-      'Approved At': r.approvedAt || '',
+      'Form Status':  r.formStatus || '',
+      'Approved By':  r.approvedBy || '',
+      'Approved At':  r.approvedAt || '',
     }));
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
@@ -487,12 +273,12 @@ export default function Laporan() {
     render: (row) => (
       <div className="laporan-detail-grid">
         {[
-          { label: 'Employee ID', value: row.employeeId },
-          { label: 'Ordered By', value: row.requestedBy },
+          { label: 'Employee ID',    value: row.employeeId },
+          { label: 'Ordered By',     value: row.requestedBy },
           { label: 'Overtime Hours', value: row.startTime && row.endTime ? `${row.startTime}–${row.endTime}` : '-' },
-          { label: 'Compensation', value: row.compensation },
-          { label: 'Task / Work', value: row.task },
-          { label: 'Work Result', value: row.result },
+          { label: 'Compensation',   value: row.compensation },
+          { label: 'Task / Work',    value: row.task },
+          { label: 'Work Result',    value: row.result },
         ].map(({ label, value }) => (
           <div key={label} className="laporan-detail-item">
             <p className="laporan-detail-label">{label}</p>
@@ -512,8 +298,8 @@ export default function Laporan() {
     pageSizeLabel: 'Show',
     pageSizeSuffix: 'rows',
     onPageSizeChange: (v) => { setRowsPerPage(Number(v)); setPage(1); },
-    onPrevious: () => setPage(p => Math.max(1, p - 1)),
-    onNext: () => setPage(p => Math.min(totalPages, p + 1)),
+    onPrevious: () => setPage((p) => Math.max(1, p - 1)),
+    onNext: () => setPage((p) => Math.min(totalPages, p + 1)),
     onSelect: (pageNum) => setPage(pageNum),
     previousLabel: 'Previous',
     nextLabel: 'Next',
@@ -532,7 +318,7 @@ export default function Laporan() {
             <button
               type="button"
               className="approval-filter-card__toggle--icon"
-              onClick={() => setMobileFilterOpen(p => !p)}
+              onClick={() => setMobileFilterOpen((p) => !p)}
               aria-expanded={mobileFilterOpen}
             >
               <span className="approval-filter-card__toggle--icon-label">
@@ -551,7 +337,7 @@ export default function Laporan() {
                     className="approval-filter-card__input"
                     placeholder="Search..."
                     value={search}
-                    onChange={e => { setSearch(e.target.value); setPage(1); }}
+                    onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                   />
                 </div>
               </div>
@@ -559,7 +345,7 @@ export default function Laporan() {
               <div className="approval-filter-card__field" style={{ flex: '1 1 180px', minWidth: 0 }}>
                 <span className="approval-filter-card__label">Overtime Month</span>
                 <TextField select fullWidth value={filterBulan}
-                  onChange={e => { setFilterBulan(e.target.value); setPage(1); }}
+                  onChange={(e) => { setFilterBulan(e.target.value); setPage(1); }}
                   SelectProps={{ displayEmpty: true }}
                   InputProps={{ startAdornment: (
                     <Box sx={{ display: 'flex', alignItems: 'center', color: '#6b7a90', mr: 0.75, ml: 0.25 }}>
@@ -569,14 +355,14 @@ export default function Laporan() {
                   sx={selectSx}
                 >
                   <MenuItem value=""><em style={{ color: '#94a3b8' }}>All Months</em></MenuItem>
-                  {BULAN_OPTIONS.map(m => <MenuItem key={m.value} value={m.value}>{m.label}</MenuItem>)}
+                  {BULAN_OPTIONS.map((m) => <MenuItem key={m.value} value={m.value}>{m.label}</MenuItem>)}
                 </TextField>
               </div>
 
               <div className="approval-filter-card__field" style={{ flex: '1 1 220px', minWidth: 0 }}>
                 <span className="approval-filter-card__label">Department</span>
                 <TextField select fullWidth value={filterDept}
-                  onChange={e => { setFilterDept(e.target.value); setPage(1); }}
+                  onChange={(e) => { setFilterDept(e.target.value); setPage(1); }}
                   SelectProps={{ displayEmpty: true }}
                   InputProps={{ startAdornment: (
                     <Box sx={{ display: 'flex', alignItems: 'center', color: '#6b7a90', mr: 0.75, ml: 0.25 }}>
@@ -586,14 +372,14 @@ export default function Laporan() {
                   sx={selectSx}
                 >
                   <MenuItem value=""><em style={{ color: '#94a3b8' }}>All Departments</em></MenuItem>
-                  {deptOptions.map(d => <MenuItem key={d} value={d}>{d}</MenuItem>)}
+                  {deptOptions.map((d) => <MenuItem key={d} value={d}>{d}</MenuItem>)}
                 </TextField>
               </div>
 
               <div className="approval-filter-card__field" style={{ flex: '1 1 200px', minWidth: 0 }}>
                 <span className="approval-filter-card__label">Form Type</span>
                 <TextField select fullWidth value={filterJenis}
-                  onChange={e => { setFilterJenis(e.target.value); setPage(1); }}
+                  onChange={(e) => { setFilterJenis(e.target.value); setPage(1); }}
                   SelectProps={{ displayEmpty: true }}
                   InputProps={{ startAdornment: (
                     <Box sx={{ display: 'flex', alignItems: 'center', color: '#6b7a90', mr: 0.75, ml: 0.25 }}>
@@ -613,7 +399,7 @@ export default function Laporan() {
               <div className="approval-filter-card__field" style={{ flex: '1 1 160px', minWidth: 0 }}>
                 <span className="approval-filter-card__label">Talenta Status</span>
                 <TextField select fullWidth value={filterTalenta}
-                  onChange={e => { setFilterTalenta(e.target.value); setPage(1); }}
+                  onChange={(e) => { setFilterTalenta(e.target.value); setPage(1); }}
                   SelectProps={{ displayEmpty: true }}
                   sx={selectSx}
                 >
@@ -632,10 +418,7 @@ export default function Laporan() {
             className="laporan-main-panel"
             contentClassName="laporan-main-panel__body"
             headerAction={!loading && total > 0 && (
-              <ExportDropdown
-                onCSV={exportCSV}
-                onExcel={exportExcel}
-              />
+              <ExportDropdown onCSV={exportCSV} onExcel={exportExcel} />
             )}
           >
             {loading ? (
@@ -677,7 +460,6 @@ export default function Laporan() {
                       animation: 'cardSlideUp 0.38s cubic-bezier(0.22, 1, 0.36, 1) both',
                       animationDelay: `${Math.min(idx * 0.03, 0.15)}s`,
                     }}>
-                      {/* Top row: no form + status talenta */}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                           <span style={{ fontSize: '0.68rem', color: '#aab4c4', fontWeight: 700, flexShrink: 0 }}>
@@ -690,7 +472,6 @@ export default function Laporan() {
                         <TalentaToggle row={row} onToggle={handleToggle} isLoading={toggling.has(row.entryId)} />
                       </div>
 
-                      {/* Badges row */}
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
                         <FormTypeBadge jenisForm={row.formType} />
                         {row.compensation && (
@@ -705,7 +486,6 @@ export default function Laporan() {
                         )}
                       </div>
 
-                      {/* Meta grid */}
                       <div className="laporan-mobile-card__meta" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px' }}>
                         {[
                           { label: 'Name',          value: row.name },
@@ -726,6 +506,7 @@ export default function Laporan() {
                     </div>
                   ))}
                 </div>
+
                 {tablePagination && (
                   <div className="approval-mob-pagination laporan-mobile-pagination">
                     <div className="approval-mob-pagination__rows">
@@ -738,20 +519,10 @@ export default function Laporan() {
                       <span className="approval-unified-pagination__label">rows</span>
                     </div>
                     <div className="approval-mob-pagination__btns">
-                      <button
-                        type="button"
-                        className="users-table-pagination__button"
-                        onClick={tablePagination.onPrevious}
-                        disabled={safePage <= 1}
-                      >
+                      <button type="button" className="users-table-pagination__button" onClick={tablePagination.onPrevious} disabled={safePage <= 1}>
                         Previous
                       </button>
-                      <button
-                        type="button"
-                        className="users-table-pagination__button"
-                        onClick={tablePagination.onNext}
-                        disabled={safePage >= totalPages}
-                      >
+                      <button type="button" className="users-table-pagination__button" onClick={tablePagination.onNext} disabled={safePage >= totalPages}>
                         Next
                       </button>
                     </div>
@@ -770,134 +541,11 @@ export default function Laporan() {
                     className="laporan-table-no-x"
                   />
                 </div>
-
               </>
             )}
           </CardBigBox>
         </Box>
       </Container>
-
-      <style>{`
-        .laporan-table-area,
-        .laporan-table-no-x {
-          min-width: 0;
-          max-width: 100%;
-          overflow-x: hidden !important;
-        }
-        .laporan-table-area .users-table-wrapper,
-        .laporan-table-no-x .users-table-wrapper {
-          overflow-x: hidden !important;
-        }
-        .laporan-table-no-x .users-table {
-          width: 100%;
-          min-width: 0;
-          table-layout: fixed;
-        }
-        .laporan-table-no-x .users-table th,
-        .laporan-table-no-x .users-table td {
-          padding-left: 0.7rem;
-          padding-right: 0.7rem;
-          line-height: 1.35;
-        }
-        .laporan-table-no-x .users-table th {
-          white-space: normal;
-          overflow-wrap: anywhere;
-        }
-        .laporan-table-no-x .users-table td {
-          white-space: normal;
-          overflow-wrap: anywhere;
-          word-break: break-word;
-        }
-        .laporan-table-no-x .users-table td > * {
-          max-width: 100%;
-        }
-        .laporan-table-no-x .users-table th:nth-child(1) { width: 14%; }
-        .laporan-table-no-x .users-table th:nth-child(2) { width: 13%; }
-        .laporan-table-no-x .users-table th:nth-child(3) { width: 17%; }
-        .laporan-table-no-x .users-table th:nth-child(4) { width: 20%; }
-        .laporan-table-no-x .users-table th:nth-child(5) { width: 12%; }
-        .laporan-table-no-x .users-table th:nth-child(6) { width: 14%; }
-        .laporan-table-no-x .users-table th:nth-child(7) { width: 10% !important; }
-        .laporan-table-no-x .users-table td:nth-child(6),
-        .laporan-table-no-x .users-table td:nth-child(7) {
-          text-align: center;
-        }
-        .laporan-table-no-x .users-table td:nth-child(7) button {
-          width: auto;
-          min-width: 70px;
-          justify-content: center;
-          padding-left: 8px;
-          padding-right: 8px;
-        }
-        .laporan-detail-grid {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 12px 16px;
-          padding: 14px 16px 18px;
-        }
-        .laporan-detail-item {
-          min-width: 0;
-        }
-        .laporan-detail-label {
-          margin: 0 0 4px;
-          color: #9aabbc;
-          font-size: 0.67rem;
-          font-weight: 700;
-          letter-spacing: 0.05em;
-          line-height: 1.2;
-          text-transform: uppercase;
-        }
-        .laporan-detail-value {
-          margin: 0;
-          color: #344563;
-          font-size: 0.84rem;
-          font-weight: 600;
-          line-height: 1.5;
-          overflow-wrap: anywhere;
-        }
-        .laporan-mobile-pagination {
-          display: none;
-        }
-        @media (max-width: 1180px) {
-          .laporan-main-panel .approval-mobile-cards {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            flex: 1;
-            min-height: 0;
-            overflow-y: auto;
-            overscroll-behavior: contain;
-            padding: 14px 0 4px;
-            border-top: 1px solid rgba(26, 42, 87, 0.09);
-          }
-          .laporan-table-area {
-            display: none;
-          }
-          .laporan-mobile-pagination {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-            padding: 10px 2px 4px;
-            flex-shrink: 0;
-            border-top: 1px solid rgba(26, 42, 87, 0.08);
-            margin-top: 2px;
-            flex-wrap: wrap;
-          }
-          .laporan-mobile-pagination .users-table-pagination__select {
-            height: 36px;
-            min-width: 72px;
-          }
-        }
-        @media (max-width: 520px) {
-          .laporan-mobile-card__meta {
-            grid-template-columns: 1fr !important;
-          }
-          .laporan-detail-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-      `}</style>
     </Box>
   );
 }

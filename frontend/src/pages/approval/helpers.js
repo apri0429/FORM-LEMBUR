@@ -49,3 +49,62 @@ export function isManagerUser(user) {
   const lvl = String(user.jobLevel || '').toLowerCase();
   return MANAGER_KEYWORDS.some((k) => pos.includes(k) || lvl.includes(k));
 }
+
+// ── Entry detail helpers ──────────────────────────────────────────────────────
+
+export const ENTRY_FIELD_ORDER = [
+  'id', 'name', 'employeeId', 'startTime', 'endTime', 'compensation', 'task', 'result',
+];
+
+export const ENTRY_FIELD_LABELS = {
+  id: 'Entry ID',
+  sequence: 'Sequence',
+  name: 'Employee Name',
+  employeeId: 'Employee ID',
+  overtimeDate: 'Overtime Date',
+  startTime: 'Start Time',
+  endTime: 'End Time',
+  task: 'Task',
+  result: 'Result',
+  compensation: 'Compensation',
+  approval: 'Approval',
+};
+
+const WIDE_ENTRY_FIELDS = new Set(['task', 'result']);
+const HIDDEN_ENTRY_FIELDS = new Set(['sequence', 'overtimeDate', 'approval']);
+
+function labelizeEntryKey(key) {
+  return String(key)
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function formatEntryValue(key, value) {
+  if (key === 'compensation') return formatKompensasi(value);
+  if (key === 'approval') {
+    if (value === 1 || value === true || value === '1') return 'Approved';
+    if (value === 0 || value === false || value === '0') return 'Pending';
+  }
+  return value ?? '-';
+}
+
+export function getEntryDetailFields(entry) {
+  const keys = [
+    ...ENTRY_FIELD_ORDER,
+    ...Object.keys(entry ?? {}).filter((key) => !ENTRY_FIELD_ORDER.includes(key)),
+  ];
+  return keys
+    .filter((key, index, arr) => arr.indexOf(key) === index)
+    .filter((key) => !HIDDEN_ENTRY_FIELDS.has(key))
+    .filter((key) => Object.prototype.hasOwnProperty.call(entry ?? {}, key))
+    .map((key) => ({
+      key,
+      label: ENTRY_FIELD_LABELS[key] ?? labelizeEntryKey(key),
+      value: formatEntryValue(key, entry?.[key]),
+      wide: WIDE_ENTRY_FIELDS.has(key),
+      accent: key === 'compensation',
+    }));
+}

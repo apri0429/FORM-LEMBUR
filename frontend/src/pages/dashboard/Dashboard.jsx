@@ -12,9 +12,9 @@ import WorkRoundedIcon from '@mui/icons-material/WorkRounded';
 import EventNoteRoundedIcon from '@mui/icons-material/EventNoteRounded';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import CardBox from '../../piagam/cardbox/CardBox';
-import CardBigBox from '../../piagam/cardbox/CardBigBox';
-import DataTable from '../../piagam/table/DataTable';
+import CardBox from '../../components/ui/CardBox';
+import CardBigBox from '../../components/ui/CardBigBox';
+import DataTable from '../../components/ui/DataTable';
 import {
   Check, FileText01, RefreshCw05, XClose, ChevronDown,
 } from '../../components/layout/icons';

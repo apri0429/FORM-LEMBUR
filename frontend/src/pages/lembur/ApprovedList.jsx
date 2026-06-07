@@ -6,7 +6,6 @@ import {
   Chip,
   CircularProgress,
   Container,
-  Typography,
 } from '@mui/material';
 import CancelIcon from '@mui/icons-material/Cancel';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -22,8 +21,10 @@ import axios from 'axios';
 
 import CardBigBox from '../../components/ui/CardBigBox';
 import CreateButton from '../../components/ui/CreateButton';
-import DataTable, { DataTableStatus } from '../../piagam/table/DataTable';
-import { ChevronDown, Check, SearchMd, XClose, Printer } from '../../components/layout/icons';
+import DataTable, { DataTableStatus } from '../../components/ui/DataTable';
+import FormTypeBadge from '../../components/ui/FormTypeBadge';
+import { SelectFilter, RowsFilter } from '../../components/ui/SelectFilter';
+import { ChevronDown, SearchMd, XClose, Printer } from '../../components/layout/icons';
 import { useAuth } from '../../context/AuthContext';
 import { DetailLemburContent } from './DetailLembur';
 import PrintPreviewModal from '../../components/ui/PrintPreviewModal';
@@ -33,15 +34,14 @@ import {
   MANAGER_KEYWORDS,
   FORM_TYPE_CHIP_MAP,
   formatKompensasi,
-  formatLemburPada,
 } from '../approval/helpers';
 
 const API = '/api/overtime';
 
 const STATUS_CHIP_MAP = {
-  approved:           { label: 'Approved',          color: 'success', icon: <CheckCircleIcon fontSize="small" /> },
-  partially_approved: { label: 'Partially Approved', color: 'warning', icon: <ThumbUpIcon fontSize="small" /> },
-  rejected:           { label: 'Rejected',           color: 'error',   icon: <CancelIcon fontSize="small" /> },
+  approved:           { label: 'Approved',           color: 'success', icon: <CheckCircleIcon fontSize="small" /> },
+  partially_approved: { label: 'Partially Approved',  color: 'warning', icon: <ThumbUpIcon fontSize="small" /> },
+  rejected:           { label: 'Rejected',            color: 'error',   icon: <CancelIcon fontSize="small" /> },
 };
 
 const pageSx = {
@@ -63,144 +63,6 @@ const pageSx = {
     overflow: 'hidden',
   },
 };
-
-function SelectFilter({ value, onChange, options, icon: Icon, placeholder, forceDown = false }) {
-  const [open, setOpen] = useState(false);
-  const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0 });
-  const triggerRef = useRef(null);
-  const wrapRef = useRef(null);
-
-  const calcPos = () => {
-    if (!triggerRef.current) return;
-    const rect = triggerRef.current.getBoundingClientRect();
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const dropHeight = 248;
-    const openUp = !forceDown && spaceBelow < dropHeight + 8 && rect.top > dropHeight + 8;
-    setDropPos({
-      top: openUp ? null : rect.bottom + 6,
-      bottom: openUp ? window.innerHeight - rect.top + 6 : null,
-      left: rect.left,
-      width: rect.width,
-      openUp,
-    });
-  };
-
-  useEffect(() => {
-    if (!open) return;
-    calcPos();
-    const handler = (e) => {
-      if (
-        triggerRef.current && !triggerRef.current.contains(e.target) &&
-        wrapRef.current && !wrapRef.current.contains(e.target)
-      ) setOpen(false);
-    };
-    const onScroll = () => calcPos();
-    document.addEventListener('mousedown', handler);
-    window.addEventListener('scroll', onScroll, true);
-    window.addEventListener('resize', onScroll);
-    return () => {
-      document.removeEventListener('mousedown', handler);
-      window.removeEventListener('scroll', onScroll, true);
-      window.removeEventListener('resize', onScroll);
-    };
-  }, [open]);
-
-  const selectedLabel = options.find((o) => o.value === value)?.label;
-
-  return (
-    <div className="sf-wrap">
-      <button
-        ref={triggerRef}
-        type="button"
-        className={`sf-trigger${open ? ' sf-trigger--open' : ''}`}
-        onClick={() => setOpen((o) => !o)}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-      >
-        {Icon && <span className="sf-icon-left"><Icon style={{ fontSize: 18 }} /></span>}
-        <span className="sf-value">
-          {selectedLabel ?? <em>{placeholder}</em>}
-        </span>
-        <ChevronDown size={16} className="sf-chevron" />
-      </button>
-
-      {open && typeof document !== 'undefined' && createPortal(
-        <div
-          ref={wrapRef}
-          className="sf-dropdown"
-          role="listbox"
-          style={{
-            position: 'fixed',
-            ...(dropPos.openUp
-              ? { bottom: dropPos.bottom, top: 'auto' }
-              : { top: dropPos.top, bottom: 'auto' }
-            ),
-            left: dropPos.left,
-            width: dropPos.width,
-            zIndex: 9999,
-          }}
-        >
-          {placeholder && (
-            <button
-              type="button"
-              className={`sf-option sf-option--placeholder${value === '' ? ' sf-option--active' : ''}`}
-              role="option"
-              aria-selected={value === ''}
-              onClick={() => { onChange(''); setOpen(false); }}
-            >
-              {placeholder}
-            </button>
-          )}
-          {options.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              className={`sf-option${value === opt.value ? ' sf-option--active' : ''}`}
-              role="option"
-              aria-selected={value === opt.value}
-              onClick={() => { onChange(opt.value); setOpen(false); }}
-            >
-              {opt.label}
-              {value === opt.value && <Check size={14} />}
-            </button>
-          ))}
-        </div>,
-        document.body
-      )}
-    </div>
-  );
-}
-
-function RowsFilter({ rowsPerPage, onChange }) {
-  return (
-    <div className="approval-desktop-rows">
-      <span className="approval-unified-pagination__label">Show</span>
-      <SelectFilter
-        value={String(rowsPerPage)}
-        onChange={onChange}
-        options={ROWS_OPTIONS.map((r) => ({ value: String(r), label: String(r) }))}
-      />
-      <span className="approval-unified-pagination__label">rows</span>
-    </div>
-  );
-}
-
-function FormTypeBadge({ jenisForm }) {
-  const cfg = FORM_TYPE_CHIP_MAP[jenisForm];
-  if (!cfg) return null;
-  const Icon = cfg.icon;
-  return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 4,
-      height: 24, padding: '0 8px', borderRadius: 12,
-      fontSize: '0.8125rem', fontWeight: 700,
-      color: cfg.color, background: cfg.bg, whiteSpace: 'nowrap',
-    }}>
-      <Icon style={{ fontSize: 14, flexShrink: 0 }} />
-      {cfg.label}
-    </span>
-  );
-}
 
 function ApprovedStatusChip({ status }) {
   const config = STATUS_CHIP_MAP[status] ?? { label: status || '-', color: 'default' };
@@ -235,23 +97,23 @@ function canRevertForm(user, form) {
 export default function ApprovedList() {
   const { user } = useAuth();
 
-  const [forms, setForms]             = useState([]);
-  const [total, setTotal]             = useState(0);
-  const [divisiOptions, setDivisiOptions] = useState([]);
-  const [loading, setLoading]         = useState(true);
-  const [error, setError]             = useState('');
-  const [search, setSearch]           = useState('');
-  const [filterStatus, setFilterStatus]       = useState('');
-  const [filterDivisi, setFilterDivisi]       = useState('');
+  const [forms, setForms]                   = useState([]);
+  const [total, setTotal]                   = useState(0);
+  const [divisiOptions, setDivisiOptions]   = useState([]);
+  const [loading, setLoading]               = useState(true);
+  const [error, setError]                   = useState('');
+  const [search, setSearch]                 = useState('');
+  const [filterStatus, setFilterStatus]     = useState('');
+  const [filterDivisi, setFilterDivisi]     = useState('');
   const [filterJenisForm, setFilterJenisForm] = useState('');
-  const [page, setPage]               = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [revertId, setRevertId]       = useState(null);
-  const [reverting, setReverting]     = useState(false);
-  const [detailForm, setDetailForm]   = useState(null);
-  const [printForm, setPrintForm]     = useState(null);
+  const [page, setPage]                     = useState(1);
+  const [rowsPerPage, setRowsPerPage]       = useState(10);
+  const [revertId, setRevertId]             = useState(null);
+  const [reverting, setReverting]           = useState(false);
+  const [detailForm, setDetailForm]         = useState(null);
+  const [printForm, setPrintForm]           = useState(null);
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
-  const [refreshKey, setRefreshKey]   = useState(0);
+  const [refreshKey, setRefreshKey]         = useState(0);
 
   const totalPages  = Math.max(1, Math.ceil(total / rowsPerPage));
   const safePage    = Math.min(page, totalPages);
@@ -270,9 +132,9 @@ export default function ApprovedList() {
       page:        String(page),
       rowsPerPage: String(rowsPerPage),
     });
-    if (search)        params.set('search',     search);
-    if (filterDivisi)  params.set('department', filterDivisi);
-    if (filterJenisForm) params.set('formType', filterJenisForm);
+    if (search)          params.set('search',     search);
+    if (filterDivisi)    params.set('department', filterDivisi);
+    if (filterJenisForm) params.set('formType',   filterJenisForm);
 
     const delay = search ? 350 : 0;
     const timer = setTimeout(() => {
@@ -295,7 +157,7 @@ export default function ApprovedList() {
       .finally(() => setReverting(false));
   };
 
-  // ── DataTable columns ─────────────────────────────────────────────
+  // ── DataTable columns ─────────────────────────────────────────
   const tableColumns = [
     {
       key: 'formNumber',
@@ -348,9 +210,7 @@ export default function ApprovedList() {
       key: 'processedBy',
       header: 'Processed By',
       render: (form) => (
-        <span
-          style={{ fontSize: '0.85rem', display: 'block', wordBreak: 'break-word', overflowWrap: 'break-word' }}
-        >
+        <span style={{ fontSize: '0.85rem', display: 'block', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
           {getProcessedBy(form)}
         </span>
       ),
@@ -385,7 +245,7 @@ export default function ApprovedList() {
     },
   ];
 
-  // ── DataTable expandable detail ────────────────────────────────────
+  // ── DataTable expandable detail ────────────────────────────────
   const tableDetail = {
     eyebrow: false,
     title: false,
@@ -407,14 +267,14 @@ export default function ApprovedList() {
               <div key={idx} className="users-table__detail-section">
                 <dl className="users-table__detail-list">
                   {[
-                    { label: 'Name',         value: entry.name },
-                    { label: 'Employee ID',  value: entry.employeeId },
+                    { label: 'Name',          value: entry.name },
+                    { label: 'Employee ID',   value: entry.employeeId },
                     { label: 'Overtime Date', value: entry.overtimeDate },
-                    { label: 'Start Time',   value: entry.startTime },
-                    { label: 'End Time',     value: entry.endTime },
-                    { label: 'Compensation', value: formatKompensasi(entry.compensation), accent: true },
-                    { label: 'Task',         value: entry.task || '-', wide: true },
-                    { label: 'Result',       value: entry.result || '-', wide: true },
+                    { label: 'Start Time',    value: entry.startTime },
+                    { label: 'End Time',      value: entry.endTime },
+                    { label: 'Compensation',  value: formatKompensasi(entry.compensation), accent: true },
+                    { label: 'Task',          value: entry.task || '-', wide: true },
+                    { label: 'Result',        value: entry.result || '-', wide: true },
                   ].map((field) => (
                     <div
                       key={field.label}
@@ -448,7 +308,7 @@ export default function ApprovedList() {
     ],
   };
 
-  // ── Pagination ─────────────────────────────────────────────────────
+  // ── Pagination ─────────────────────────────────────────────────
   const buildPaginationItems = () => {
     if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
     const items = [1];
@@ -476,10 +336,10 @@ export default function ApprovedList() {
     previousLabel: 'Previous',
     nextLabel: 'Next',
     items: buildPaginationItems(),
-    pageSizeNode: <RowsFilter rowsPerPage={rowsPerPage} onChange={(v) => { setRowsPerPage(Number(v)); setPage(1); }} />,
+    pageSizeNode: <RowsFilter rowsPerPage={rowsPerPage} onChange={(v) => { setRowsPerPage(Number(v)); setPage(1); }} label="Show" />,
   } : null;
 
-  // ── Empty state ────────────────────────────────────────────────────
+  // ── Empty state ────────────────────────────────────────────────
   const emptyState = isFiltered
     ? {
       title: 'No results found',
@@ -505,80 +365,77 @@ export default function ApprovedList() {
     label: FORM_TYPE_CHIP_MAP[j]?.label ?? j,
   }));
 
-  // ── Filter card ────────────────────────────────────────────────────
-  const filterCard = (
-    <CardBigBox>
-      <button
-        type="button"
-        className="approval-filter-card__toggle--icon"
-        onClick={() => setMobileFilterOpen((p) => !p)}
-        aria-expanded={mobileFilterOpen}
-      >
-        <span className="approval-filter-card__toggle--icon-label">
-          <FilterListRoundedIcon style={{ fontSize: 16 }} />
-          Filter & Search
-        </span>
-        <ChevronDown size={15} style={{ transition: 'transform 0.22s', transform: mobileFilterOpen ? 'rotate(180deg)' : 'rotate(0deg)', flexShrink: 0 }} />
-      </button>
-      <div className={`approval-filter-card__fields${mobileFilterOpen ? ' approval-filter-card__fields--mobile-open' : ''}`} style={{ padding: '4px 0' }}>
-        <div className="approval-filter-card__field approval-filter-card__field--search">
-          <span className="approval-filter-card__label">Search</span>
-          <div className="approval-filter-card__input-wrap">
-            <span className="approval-filter-card__icon"><SearchMd size={18} /></span>
-            <input
-              type="text"
-              className="approval-filter-card__input"
-              placeholder="Search form no. or name..."
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            />
-          </div>
-        </div>
-
-        <div className="approval-filter-card__field" style={{ flex: '1 1 240px', minWidth: 0 }}>
-          <span className="approval-filter-card__label">Department</span>
-          <SelectFilter
-            value={filterDivisi}
-            onChange={(v) => { setFilterDivisi(v); setPage(1); }}
-            placeholder="All Departments"
-            icon={ApartmentRoundedIcon}
-            options={divisiOptions.map((d) => ({ value: d, label: d }))}
-          />
-        </div>
-
-        <div className="approval-filter-card__field" style={{ flex: '1 1 240px', minWidth: 0 }}>
-          <span className="approval-filter-card__label">Form Type</span>
-          <SelectFilter
-            value={filterJenisForm}
-            onChange={(v) => { setFilterJenisForm(v); setPage(1); }}
-            placeholder="All Form Types"
-            icon={AssignmentIndRoundedIcon}
-            options={jenisFormOptions}
-          />
-        </div>
-
-        <div className="approval-filter-card__field" style={{ flex: '1 1 200px', minWidth: 0 }}>
-          <span className="approval-filter-card__label">Status</span>
-          <SelectFilter
-            value={filterStatus}
-            onChange={(v) => { setFilterStatus(v); setPage(1); }}
-            placeholder="All Statuses"
-            icon={LocalOfferRoundedIcon}
-            options={statusOptions}
-          />
-        </div>
-      </div>
-    </CardBigBox>
-  );
-
   return (
     <Box sx={{ height: '100%', minHeight: 0, width: '100%', overflowX: 'hidden' }}>
       <Container disableGutters maxWidth={false} sx={{ height: '100%', minHeight: 0, width: '100%' }}>
         <Box className="dashboard-content" sx={pageSx}>
           {error && <Alert severity="error" onClose={() => setError('')}>{error}</Alert>}
 
-          {filterCard}
+          {/* ── Filter card ── */}
+          <CardBigBox>
+            <button
+              type="button"
+              className="approval-filter-card__toggle--icon"
+              onClick={() => setMobileFilterOpen((p) => !p)}
+              aria-expanded={mobileFilterOpen}
+            >
+              <span className="approval-filter-card__toggle--icon-label">
+                <FilterListRoundedIcon style={{ fontSize: 16 }} />
+                Filter & Search
+              </span>
+              <ChevronDown size={15} style={{ transition: 'transform 0.22s', transform: mobileFilterOpen ? 'rotate(180deg)' : 'rotate(0deg)', flexShrink: 0 }} />
+            </button>
+            <div className={`approval-filter-card__fields${mobileFilterOpen ? ' approval-filter-card__fields--mobile-open' : ''}`} style={{ padding: '4px 0' }}>
+              <div className="approval-filter-card__field approval-filter-card__field--search">
+                <span className="approval-filter-card__label">Search</span>
+                <div className="approval-filter-card__input-wrap">
+                  <span className="approval-filter-card__icon"><SearchMd size={18} /></span>
+                  <input
+                    type="text"
+                    className="approval-filter-card__input"
+                    placeholder="Search form no. or name..."
+                    value={search}
+                    onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                  />
+                </div>
+              </div>
 
+              <div className="approval-filter-card__field" style={{ flex: '1 1 240px', minWidth: 0 }}>
+                <span className="approval-filter-card__label">Department</span>
+                <SelectFilter
+                  value={filterDivisi}
+                  onChange={(v) => { setFilterDivisi(v); setPage(1); }}
+                  placeholder="All Departments"
+                  icon={ApartmentRoundedIcon}
+                  options={divisiOptions.map((d) => ({ value: d, label: d }))}
+                />
+              </div>
+
+              <div className="approval-filter-card__field" style={{ flex: '1 1 240px', minWidth: 0 }}>
+                <span className="approval-filter-card__label">Form Type</span>
+                <SelectFilter
+                  value={filterJenisForm}
+                  onChange={(v) => { setFilterJenisForm(v); setPage(1); }}
+                  placeholder="All Form Types"
+                  icon={AssignmentIndRoundedIcon}
+                  options={jenisFormOptions}
+                />
+              </div>
+
+              <div className="approval-filter-card__field" style={{ flex: '1 1 200px', minWidth: 0 }}>
+                <span className="approval-filter-card__label">Status</span>
+                <SelectFilter
+                  value={filterStatus}
+                  onChange={(v) => { setFilterStatus(v); setPage(1); }}
+                  placeholder="All Statuses"
+                  icon={LocalOfferRoundedIcon}
+                  options={statusOptions}
+                />
+              </div>
+            </div>
+          </CardBigBox>
+
+          {/* ── Main table card ── */}
           <CardBigBox
             eyebrow="Form List"
             title="Processed Forms"
@@ -621,7 +478,7 @@ export default function ApprovedList() {
               </div>
             ) : (
               <>
-                {/* Desktop: DataTable */}
+                {/* Desktop DataTable */}
                 <div className="approval-desktop-table">
                   <DataTable
                     rows={forms}
@@ -633,7 +490,7 @@ export default function ApprovedList() {
                   />
                 </div>
 
-                {/* Mobile: card layout */}
+                {/* Mobile cards */}
                 <div className="approval-mobile-cards">
                   {forms.map((form) => (
                     <div key={form.id} className="approval-mob-card">
@@ -670,11 +527,11 @@ export default function ApprovedList() {
 
                       <div className="approval-mob-card__meta">
                         {[
-                          { label: 'Department',    value: form.department || '-' },
-                          { label: 'Requested By',  value: form.requestedBy || '-' },
-                          { label: 'Submit Date',   value: form.submissionDate || '-' },
-                          { label: 'Employees',     value: `${form.entries?.length || 0}` },
-                          { label: 'Processed By',  value: getProcessedBy(form) },
+                          { label: 'Department',   value: form.department || '-' },
+                          { label: 'Requested By', value: form.requestedBy || '-' },
+                          { label: 'Submit Date',  value: form.submissionDate || '-' },
+                          { label: 'Employees',    value: `${form.entries?.length || 0}` },
+                          { label: 'Processed By', value: getProcessedBy(form) },
                         ].map(({ label, value }) => (
                           <div key={label} className="approval-mob-card__meta-item">
                             <span className="approval-mob-card__meta-label">{label}</span>
@@ -728,12 +585,7 @@ export default function ApprovedList() {
                 <p className="dashboard-popup__eyebrow">Overtime Form Detail</p>
                 <h2 className="dashboard-popup__title">{detailForm.formNumber}</h2>
               </div>
-              <button
-                type="button"
-                className="dashboard-popup__close"
-                aria-label="Close"
-                onClick={() => setDetailForm(null)}
-              >
+              <button type="button" className="dashboard-popup__close" aria-label="Close" onClick={() => setDetailForm(null)}>
                 <XClose size={18} />
               </button>
             </div>
@@ -768,12 +620,7 @@ export default function ApprovedList() {
                 <p className="dashboard-popup__eyebrow">Confirmation</p>
                 <h2 className="dashboard-popup__title">Revert to Queue?</h2>
               </div>
-              <button
-                type="button"
-                className="dashboard-popup__close"
-                aria-label="Close"
-                onClick={() => !reverting && setRevertId(null)}
-              >
+              <button type="button" className="dashboard-popup__close" aria-label="Close" onClick={() => !reverting && setRevertId(null)}>
                 <XClose size={18} />
               </button>
             </div>
@@ -806,7 +653,6 @@ export default function ApprovedList() {
         document.body
       )}
 
-      {/* Print preview modal */}
       {printForm && <PrintPreviewModal form={printForm} onClose={() => setPrintForm(null)} />}
     </Box>
   );

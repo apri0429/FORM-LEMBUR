@@ -1,0 +1,123 @@
+.laporan-table-area,
+.laporan-table-no-x {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden !important;
+}
+.laporan-table-area .users-table-wrapper,
+.laporan-table-no-x .users-table-wrapper {
+  overflow-x: hidden !important;
+}
+.laporan-table-no-x .users-table {
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+}
+.laporan-table-no-x .users-table th,
+.laporan-table-no-x .users-table td {
+  padding-left: 0.7rem;
+  padding-right: 0.7rem;
+  line-height: 1.35;
+}
+.laporan-table-no-x .users-table th {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.laporan-table-no-x .users-table td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.laporan-table-no-x .users-table td > * {
+  max-width: 100%;
+}
+.laporan-table-no-x .users-table th:nth-child(1) { width: 14%; }
+.laporan-table-no-x .users-table th:nth-child(2) { width: 13%; }
+.laporan-table-no-x .users-table th:nth-child(3) { width: 17%; }
+.laporan-table-no-x .users-table th:nth-child(4) { width: 20%; }
+.laporan-table-no-x .users-table th:nth-child(5) { width: 12%; }
+.laporan-table-no-x .users-table th:nth-child(6) { width: 14%; }
+.laporan-table-no-x .users-table th:nth-child(7) { width: 10% !important; }
+.laporan-table-no-x .users-table td:nth-child(6),
+.laporan-table-no-x .users-table td:nth-child(7) {
+  text-align: center;
+}
+.laporan-table-no-x .users-table td:nth-child(7) button {
+  width: auto;
+  min-width: 70px;
+  justify-content: center;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.laporan-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px 16px;
+  padding: 14px 16px 18px;
+}
+.laporan-detail-item {
+  min-width: 0;
+}
+.laporan-detail-label {
+  margin: 0 0 4px;
+  color: #9aabbc;
+  font-size: 0.67rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+.laporan-detail-value {
+  margin: 0;
+  color: #344563;
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.laporan-mobile-pagination {
+  display: none;
+}
+
+@media (max-width: 1180px) {
+  .laporan-main-panel .approval-mobile-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 14px 0 4px;
+    border-top: 1px solid rgba(26, 42, 87, 0.09);
+  }
+  .laporan-table-area {
+    display: none;
+  }
+  .laporan-mobile-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 2px 4px;
+    flex-shrink: 0;
+    border-top: 1px solid rgba(26, 42, 87, 0.08);
+    margin-top: 2px;
+    flex-wrap: wrap;
+  }
+  .laporan-mobile-pagination .users-table-pagination__select {
+    height: 36px;
+    min-width: 72px;
+  }
+}
+
+@media (max-width: 520px) {
+  .laporan-mobile-card__meta {
+    grid-template-columns: 1fr !important;
+  }
+  .laporan-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -118,7 +118,6 @@ export default function DataTable({
 
               return (
                 <React.Fragment key={id}>
-                  {/* Main row */}
                   <tr
                     className={`users-table__row${expanded ? ' users-table__row--expanded' : ''}`}
                     onClick={detail ? () => toggleRow(id) : undefined}
@@ -156,7 +155,6 @@ export default function DataTable({
                     )}
                   </tr>
 
-                  {/* Expanded detail row */}
                   {detail && expanded && (
                     <tr className="users-table__accordion-row">
                       <td colSpan={totalCols} style={{ padding: '0 0 10px' }}>

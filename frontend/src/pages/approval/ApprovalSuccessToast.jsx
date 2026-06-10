@@ -12,8 +12,10 @@ export default function ApprovalSuccessToast({ success, isRejectToast }) {
     <Box sx={{
       position: 'fixed', top: '50%', left: '50%',
       transform: 'translate(-50%, -50%)',
-      zIndex: 1400, width: 420, minWidth: 420, maxWidth: 420,
-      display: { xs: 'none', sm: 'block' },
+      zIndex: 1400,
+      width: { xs: 'calc(100vw - 32px)', sm: 420 },
+      minWidth: { xs: 0, sm: 420 },
+      maxWidth: { xs: 'calc(100vw - 32px)', sm: 420 },
       '@keyframes certIn':    { '0%': { opacity:0, transform:'translate(-50%,-50%) scale(0.82)' }, '60%': { opacity:1, transform:'translate(-50%,-50%) scale(1.03)' }, '100%': { opacity:1, transform:'translate(-50%,-50%) scale(1)' } },
       '@keyframes certOut':   { from: { opacity:1, transform:'translate(-50%,-50%) scale(1)' }, to: { opacity:0, transform:'translate(-50%,-50%) scale(0.9)' } },
       '@keyframes iconPop':   { '0%': { transform:'scale(0) rotate(-30deg)' }, '55%': { transform:'scale(1.18) rotate(6deg)' }, '75%': { transform:'scale(0.92) rotate(-2deg)' }, '100%': { transform:'scale(1) rotate(0deg)' } },

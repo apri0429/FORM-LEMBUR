@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt    = require('jsonwebtoken');
 const pool   = require('../config/db');
-const { BOD_KEYS, MANAGER_KEYS } = require('../constants/roles');
+const { BOD_KEYS, MANAGER_KEYS, isHCGAPrivileged } = require('../constants/roles');
 
 async function login(req, res) {
   const { username, password } = req.body;
@@ -59,10 +59,21 @@ async function login(req, res) {
     const isKoord    = jobLevel.includes('koordinator') || jobPosition.includes('koordinator');
     const isMgr      = MANAGER_KEYS.some(k => jobLevel.includes(k) || jobPosition.includes(k));
 
-    const allowedFormTypes = isAdmin
+    const hcgaPriv   = isHCGAPrivileged({
+      department: u.dept_name || '',
+      jobLevel:   u.job_level_name || '',
+      name:       u.name || '',
+    });
+
+    const allowedFormTypes = (isAdmin || hcgaPriv)
       ? ['manager', 'staff', 'outsourcing', 'harian_lepas']
       : isKoord ? ['staff', 'outsourcing', 'harian_lepas']
       : isMgr ? ['manager', 'staff'] : ['staff'];
+
+    const isElvira        = (u.name || '').toLowerCase().includes('elvira');
+    const canSeeDashboard = isAdmin || isBOD || hcgaPriv;
+    const canSeeReports   = isAdmin || hcgaPriv;
+    const canApprove      = isAdmin || (isMgr && !isElvira);
 
     const userData = {
       id:              u.id,
@@ -82,11 +93,21 @@ async function login(req, res) {
       role:            isAdmin ? 'admin' : 'user',
       isAdmin,
       allowedFormTypes,
+      canSeeDashboard,
+      canSeeReports,
+      canApprove,
       departments:     allDepartments,
     };
 
     const token = jwt.sign(
-      { id: u.id, username: u.username, role: userData.role, department: u.dept_name || '' },
+      {
+        id:         u.id,
+        username:   u.username,
+        role:       userData.role,
+        department: u.dept_name || '',
+        name:       u.name || '',
+        jobLevel:   u.job_level_name || '',
+      },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
     );

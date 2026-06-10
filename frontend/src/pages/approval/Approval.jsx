@@ -95,6 +95,7 @@ export default function Approval() {
   const jenisFormOptions = Object.keys(FORM_TYPE_CHIP_MAP);
 
   const canUserAct = (form) => {
+    if (user?.canApprove === false && user?.canSeeReports) return false;
     if (isAdmin) return true;
     if (form.formType === 'manager') return false;
     if (isManager && form.department === user?.department) return true;
@@ -259,7 +260,7 @@ export default function Approval() {
             title="Edit Form"
             aria-label="Edit Form"
             style={{ borderColor: 'rgba(212,136,30,0.35)', color: '#b8750f', background: 'rgba(244,169,64,0.07)' }}
-            onClick={(e) => { e.stopPropagation(); navigate(`/form/edit/${form.id}`); }}
+            onClick={(e) => { e.stopPropagation(); navigate(`/overtime/${form.id}/edit`); }}
           >
             <EditRoundedIcon style={{ fontSize: 16 }} />
           </CreateButton>
@@ -516,7 +517,7 @@ export default function Approval() {
                             title="Edit Form"
                             aria-label="Edit Form"
                             style={{ borderColor: 'rgba(212,136,30,0.35)', color: '#b8750f', background: 'rgba(244,169,64,0.07)' }}
-                            onClick={() => navigate(`/form/edit/${form.id}`)}
+                            onClick={() => navigate(`/overtime/${form.id}/edit`)}
                           >
                             <EditRoundedIcon style={{ fontSize: 16 }} />
                           </CreateButton>

@@ -393,7 +393,7 @@ export default function Dashboard() {
     <button
       type="button"
       className="add-board-button"
-      onClick={() => navigate('/form/baru')}
+      onClick={() => navigate('/overtime/new')}
     >
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 5v14M5 12h14" />

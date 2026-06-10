@@ -68,9 +68,8 @@ export default function ApprovalDetailPopup({
             <FormTypeBadge jenisForm={detailForm.formType} />
           </div>
 
-          <div style={{
+          <div className="approval-detail-summary" style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
             gap: 8,
             flexShrink: 0,
           }}>

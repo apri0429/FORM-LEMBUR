@@ -1,5 +1,6 @@
-const { v4: uuidv4 } = require('uuid');
-const pool           = require('../config/db');
+const { v4: uuidv4 }     = require('uuid');
+const pool               = require('../config/db');
+const { isHCGAPrivileged } = require('../constants/roles');
 
 const BASE_SELECT = `
   SELECT cu.id, cu.internal_id, cu.name, cu.email, cu.phone,
@@ -94,9 +95,9 @@ async function getAll(req, res) {
 
 async function getDepartments(req, res) {
   try {
-    const isAdmin = req.user?.role === 'admin';
+    const canSeeAll = req.user?.role === 'admin' || isHCGAPrivileged(req.user);
     let rows;
-    if (isAdmin) {
+    if (canSeeAll) {
       [rows] = await pool.query(
         `SELECT md.id, md.name, md.code, md.class FROM master_departments md WHERE md.is_active = 1 ORDER BY md.name ASC, md.class ASC`
       );

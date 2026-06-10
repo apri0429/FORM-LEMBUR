@@ -1,6 +1,6 @@
 const { v4: uuidv4 }        = require('uuid');
 const pool                  = require('../config/db');
-const { MANAGER_KEYS }      = require('../constants/roles');
+const { MANAGER_KEYS, isHCGAPrivileged } = require('../constants/roles');
 const { formatDate, generateFormNumber } = require('../utils/date');
 
 /* ── Mappers ─────────────────────────────────────────────────── */
@@ -82,6 +82,8 @@ async function getApproverProfile(userId) {
 
 async function checkApproverAuth(reqUser, form) {
   if (reqUser.role === 'admin') return null;
+  const isElvira = (reqUser.name || '').toLowerCase().includes('elvira');
+  if (isElvira) return 'You have view-only access and cannot approve forms.';
   const approver = await getApproverProfile(reqUser.id);
   const lvl  = (approver?.job_level_name || '').toLowerCase();
   const dept = approver?.dept_name || '';
@@ -112,9 +114,7 @@ async function getDashboard(req, res) {
     const limit  = Math.min(50, Math.max(1, parseInt(req.query.limit) || 10));
     const offset = (page - 1) * limit;
 
-    const isAdmin   = req.user.role === 'admin';
-    const isHCGA    = (req.user.department || '').toUpperCase() === 'HCGA';
-    const canSeeAll = isAdmin || isHCGA;
+    const canSeeAll   = req.user.role === 'admin' || isHCGAPrivileged(req.user);
     const whereClause = canSeeAll ? '1=1' : 'department = ?';
     const whereParams = canSeeAll ? []    : [req.user.department || ''];
 
@@ -264,10 +264,8 @@ async function getAll(req, res) {
 
     if (req.query.excludePending === 'true') whereSql += " AND status != 'pending'";
 
-    const isHCGA = (req.user.department || '').toUpperCase() === 'HCGA';
-    const requestedStatuses = (statuses || status || '').split(',').map(s => s.trim()).filter(Boolean);
-    const hcgaViewAll = isHCGA && requestedStatuses.length > 0 && !requestedStatuses.includes('pending');
-    if (req.user.role !== 'admin' && !hcgaViewAll) {
+    const canViewAll = req.user.role === 'admin' || isHCGAPrivileged(req.user);
+    if (!canViewAll) {
       whereSql += ' AND department = ?'; whereParams.push(req.user.department || '');
     } else if (department) {
       whereSql += ' AND department = ?'; whereParams.push(department);

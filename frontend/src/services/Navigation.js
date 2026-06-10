@@ -15,10 +15,11 @@ export const defaultNavigationPath = '/dashboard'
 export const implementedNavigationPaths = [
   '/',
   '/dashboard',
-  '/form/baru',
-  '/approval',
-  '/approved',
-  '/laporan',
+  '/overtime/new',
+  '/overtime/approvals',
+  '/overtime/history',
+  '/reports',
+  '/reports/entered',
   '/admin/employees',
   '/admin/departments',
 ]
@@ -33,19 +34,19 @@ export const primaryNavigationItems = [
   {
     id: 'buat-form',
     label: 'Create Form',
-    href: '/form/baru',
+    href: '/overtime/new',
     icon: FilePlus,
   },
   {
     id: 'approval',
     label: 'Approval',
-    href: '/approval',
+    href: '/overtime/approvals',
     icon: ClipboardList,
   },
   {
     id: 'approved',
     label: 'Approved',
-    href: '/approved',
+    href: '/overtime/history',
     icon: ClipboardCheck,
   },
 ]
@@ -54,8 +55,11 @@ export const hrNavigationItems = [
   {
     id: 'laporan',
     label: 'Reports',
-    href: '/laporan',
     icon: Chart01,
+    children: [
+      { id: 'laporan-pending',  label: 'Overtime Report',      href: '/reports' },
+      { id: 'laporan-entered',  label: 'Entered in Talenta',   href: '/reports/entered' },
+    ],
   },
 ]
 

@@ -12,6 +12,7 @@ import ManageAccountsRoundedIcon from '@mui/icons-material/ManageAccountsRounded
 import WorkRoundedIcon from '@mui/icons-material/WorkRounded';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
+import { useLocation } from 'react-router-dom';
 
 import CardBigBox from '../../components/ui/CardBigBox';
 import DataTable from '../../components/ui/DataTable';
@@ -108,21 +109,29 @@ function FormTypeBadge({ jenisForm }) {
 }
 
 export default function Laporan() {
-  const [rows, setRows]           = useState([]);
-  const [total, setTotal]         = useState(0);
+  const { pathname } = useLocation();
+  const isEntered = pathname === '/reports/entered';
+
+  const [rows, setRows]             = useState([]);
+  const [total, setTotal]           = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [deptOptions, setDeptOptions] = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState('');
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState('');
   const [filterBulan, setFilterBulan]   = useState('');
   const [filterDept, setFilterDept]     = useState('');
   const [filterJenis, setFilterJenis]   = useState('');
-  const [filterTalenta, setFilterTalenta] = useState('');
-  const [page, setPage]           = useState(1);
+  const [page, setPage]             = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(25);
-  const [toggling, setToggling]   = useState(new Set());
+  const [toggling, setToggling]     = useState(new Set());
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
-  const [search, setSearch]       = useState('');
+  const [search, setSearch]         = useState('');
+
+  // Reset pagination when switching between pages
+  useEffect(() => {
+    setPage(1);
+    setRows([]);
+  }, [isEntered]);
 
   useEffect(() => {
     axios.get(`${API}/filter-options`)
@@ -132,12 +141,11 @@ export default function Laporan() {
 
   useEffect(() => {
     setLoading(true);
-    const params = { page, limit: rowsPerPage };
-    if (filterBulan)   params.bulan        = filterBulan;
-    if (filterDept)    params.department   = filterDept;
-    if (filterJenis)   params.formType     = filterJenis;
-    if (filterTalenta) params.talentaInput = filterTalenta;
-    if (search.trim()) params.search       = search.trim();
+    const params = { page, limit: rowsPerPage, talentaInput: isEntered ? '1' : '0' };
+    if (filterBulan)   params.bulan      = filterBulan;
+    if (filterDept)    params.department = filterDept;
+    if (filterJenis)   params.formType   = filterJenis;
+    if (search.trim()) params.search     = search.trim();
 
     axios.get(API, { params })
       .then((r) => {
@@ -148,19 +156,19 @@ export default function Laporan() {
       })
       .catch(() => setError('Failed to load report data.'))
       .finally(() => setLoading(false));
-  }, [filterBulan, filterDept, filterJenis, filterTalenta, search, page, rowsPerPage]);
+  }, [isEntered, filterBulan, filterDept, filterJenis, search, page, rowsPerPage]);
 
   const safePage = Math.min(page, totalPages);
 
   const handleToggle = async (row) => {
-    const id = row.entryId;
+    const id   = row.entryId;
     const next = !row.talentaInput;
-    setRows((prev) => prev.map((r) => r.entryId === id ? { ...r, talentaInput: next } : r));
+    setRows((prev) => prev.filter((r) => r.entryId !== id));
+    setTotal((prev) => Math.max(0, prev - 1));
     setToggling((prev) => new Set(prev).add(id));
     try {
       await axios.patch(`${API}/entry/${id}/talenta`, { talentaInput: next });
     } catch {
-      setRows((prev) => prev.map((r) => r.entryId === id ? { ...r, talentaInput: !next } : r));
       setError('Failed to update Talenta status. Please try again.');
     } finally {
       setToggling((prev) => { const s = new Set(prev); s.delete(id); return s; });
@@ -170,12 +178,11 @@ export default function Laporan() {
   const getLabel = (r) => FORM_TYPE_CHIP_MAP[r.formType]?.label || r.formType || '';
 
   const fetchAllForExport = async () => {
-    const params = {};
-    if (filterBulan)   params.bulan        = filterBulan;
-    if (filterDept)    params.department   = filterDept;
-    if (filterJenis)   params.formType     = filterJenis;
-    if (filterTalenta) params.talentaInput = filterTalenta;
-    if (search.trim()) params.search       = search.trim();
+    const params = { talentaInput: isEntered ? '1' : '0' };
+    if (filterBulan)   params.bulan      = filterBulan;
+    if (filterDept)    params.department = filterDept;
+    if (filterJenis)   params.formType   = filterJenis;
+    if (search.trim()) params.search     = search.trim();
     const r = await axios.get(`${API}/export`, { params });
     return r.data.data || [];
   };
@@ -206,20 +213,20 @@ export default function Laporan() {
   const exportExcel = async () => {
     const allRows = await fetchAllForExport();
     const data = allRows.map((r) => ({
-      'Form No.':     r.formNumber || '',
-      'Form Type':    getLabel(r),
-      'Department':   r.department || '',
-      'Ordered By':   r.requestedBy || '',
+      'Form No.':      r.formNumber || '',
+      'Form Type':     getLabel(r),
+      'Department':    r.department || '',
+      'Ordered By':    r.requestedBy || '',
       'Employee Name': r.name || '',
-      'Employee ID':  r.employeeId || '',
+      'Employee ID':   r.employeeId || '',
       'Overtime Date': r.overtimeDate || '',
-      'Start Time':   r.startTime || '',
-      'End Time':     r.endTime || '',
-      'Compensation': r.compensation || '',
+      'Start Time':    r.startTime || '',
+      'End Time':      r.endTime || '',
+      'Compensation':  r.compensation || '',
       'Talenta Input': r.talentaInput ? 'Done' : 'Pending',
-      'Form Status':  r.formStatus || '',
-      'Approved By':  r.approvedBy || '',
-      'Approved At':  r.approvedAt || '',
+      'Form Status':   r.formStatus || '',
+      'Approved By':   r.approvedBy || '',
+      'Approved At':   r.approvedAt || '',
     }));
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
@@ -227,7 +234,7 @@ export default function Laporan() {
     XLSX.writeFile(wb, `Overtime-Report-${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
-  const isFiltered = !!(filterBulan || filterDept || filterJenis || filterTalenta || search.trim());
+  const isFiltered = !!(filterBulan || filterDept || filterJenis || search.trim());
 
   const buildPaginationItems = () => {
     if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -306,6 +313,13 @@ export default function Laporan() {
     items: buildPaginationItems(),
     pageSizeNode: <RowsFilter rowsPerPage={rowsPerPage} onChange={(v) => { setRowsPerPage(Number(v)); setPage(1); }} />,
   } : null;
+
+  const pageTitle   = isEntered ? 'Entered in Talenta' : 'Overtime Report';
+  const emptyMsg    = isFiltered
+    ? 'No data matching the selected filters.'
+    : isEntered
+      ? 'No records have been entered in Talenta yet.'
+      : 'No pending overtime data.';
 
   return (
     <Box sx={{ height: '100%', minHeight: 0, width: '100%', overflowX: 'hidden' }}>
@@ -395,26 +409,13 @@ export default function Laporan() {
                   <MenuItem value="harian_lepas">Daily Worker</MenuItem>
                 </TextField>
               </div>
-
-              <div className="approval-filter-card__field" style={{ flex: '1 1 160px', minWidth: 0 }}>
-                <span className="approval-filter-card__label">Talenta Status</span>
-                <TextField select fullWidth value={filterTalenta}
-                  onChange={(e) => { setFilterTalenta(e.target.value); setPage(1); }}
-                  SelectProps={{ displayEmpty: true }}
-                  sx={selectSx}
-                >
-                  <MenuItem value=""><em style={{ color: '#94a3b8' }}>All</em></MenuItem>
-                  <MenuItem value="1">✓ Entered</MenuItem>
-                  <MenuItem value="0">○ Not Entered</MenuItem>
-                </TextField>
-              </div>
             </div>
           </CardBigBox>
 
           {/* ── Main table card ── */}
           <CardBigBox
             eyebrow="HRD"
-            title="Overtime Report"
+            title={pageTitle}
             className="laporan-main-panel"
             contentClassName="laporan-main-panel__body"
             headerAction={!loading && total > 0 && (
@@ -428,12 +429,12 @@ export default function Laporan() {
             ) : rows.length === 0 ? (
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 10, gap: 1.5 }}>
                 <Typography color="text.secondary" sx={{ fontSize: '0.92rem' }}>
-                  {isFiltered ? 'No data matching the selected filters.' : 'No approved overtime data yet.'}
+                  {emptyMsg}
                 </Typography>
                 {isFiltered && (
                   <button
                     type="button"
-                    onClick={() => { setFilterBulan(''); setFilterDept(''); setFilterJenis(''); setFilterTalenta(''); setPage(1); }}
+                    onClick={() => { setFilterBulan(''); setFilterDept(''); setFilterJenis(''); setPage(1); }}
                     style={{
                       display: 'inline-flex', alignItems: 'center', gap: 5,
                       height: 32, padding: '0 14px', borderRadius: 8,
@@ -537,7 +538,7 @@ export default function Laporan() {
                     getRowId={(row) => row.entryId}
                     detail={tableDetail}
                     pagination={tablePagination}
-                    tableLabel="Overtime Report"
+                    tableLabel={pageTitle}
                     className="laporan-table-no-x"
                   />
                 </div>

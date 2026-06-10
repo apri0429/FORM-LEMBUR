@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const { isHCGAPrivileged } = require('../constants/roles');
 
 const BASE_WHERE    = "lf.status IN ('approved', 'partially_approved')";
 const DEFAULT_LIMIT = 25;
@@ -35,8 +36,7 @@ function buildFilters(query, reqUser) {
   let where = BASE_WHERE;
   const params = [];
 
-  const isHCGA = (reqUser.department || '').toUpperCase() === 'HCGA';
-  const canSeeAll = reqUser.role === 'admin' || isHCGA;
+  const canSeeAll = reqUser.role === 'admin' || isHCGAPrivileged(reqUser);
   if (!canSeeAll) {
     where += ' AND lf.department = ?';
     params.push(reqUser.department || '');
@@ -71,8 +71,7 @@ function buildFilters(query, reqUser) {
 
 async function getFilterOptions(req, res) {
   try {
-    const isHCGA    = (req.user.department || '').toUpperCase() === 'HCGA';
-    const canSeeAll = req.user.role === 'admin' || isHCGA;
+    const canSeeAll   = req.user.role === 'admin' || isHCGAPrivileged(req.user);
     const clause      = canSeeAll ? '' : ' AND lf.department = ?';
     const clauseParam = canSeeAll ? [] : [req.user.department || ''];
 
